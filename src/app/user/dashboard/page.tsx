@@ -3,12 +3,12 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Button } from "../../components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Badge } from "../../components/ui/badge"
-import { Avatar, AvatarFallback } from "../../components/ui/avatar"
-import { Progress } from "../../components/ui/progress"
-import { FloatingMascot } from "../../components/ui/floating-mascot"
+import { Button } from "../../../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
+import { Badge } from "../../../components/ui/badge"
+import { Avatar, AvatarFallback } from "../../../components/ui/avatar"
+import { Progress } from "../../../components/ui/progress"
+import { FloatingMascot } from "../../../components/ui/floating-mascot"
 import {
   Play,
   Calendar,
@@ -351,33 +351,7 @@ export default function DashboardPage() {
                   Schedule
                 </Button>
               </div>
-            </div>
-
-            {/* Dashboard Navigation Tabs */}
-            <div className="flex space-x-1 bg-[#0D1117]/50 rounded-lg p-1">
-              {[
-                { id: "overview", label: "Overview", icon: Home },
-                { id: "sessions", label: "Sessions", icon: CalendarIcon },
-                { id: "interviewers", label: "Interviewers", icon: Users },
-                { id: "feedback", label: "Feedback", icon: MessageSquare },
-                { id: "analytics", label: "Analytics", icon: BarChart3 },
-              ].map((tab) => (
-                <motion.button
-                  key={tab.id}
-                  onClick={() => setDashboardTab(tab.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all duration-200 ${
-                    dashboardTab === tab.id
-                      ? "bg-[#BC8CFF]/20 text-[#BC8CFF] shadow-lg"
-                      : "text-[#7D8590] hover:text-[#E6EDF3] hover:bg-[#30363D]/50"
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  <span className="font-medium">{tab.label}</span>
-                </motion.button>
-              ))}
-            </div>
+            </div>          
           </div>
         </div>
 
