@@ -123,7 +123,7 @@ export default function Auth() {
         } else if (user.role === 'admin') {
           router.push('/admin/dashboard')
         } else {
-          router.push('/dashboard')
+          router.push('/user/dashboard')
         }
 
       }

@@ -67,37 +67,37 @@ export const Navigation = ({ isLoggedIn = false, onLogout }: NavigationProps) =>
             </motion.div>
           </Link>
 
-          { pathname.startsWith('/dashboard') && (
+          { pathname.startsWith('/user') && (
             <div className="hidden md:flex items-center space-x-1">
               <NavButton 
-                href="/dashboard" 
+                href="/user/dashboard" 
                 icon={Home} 
                 label="Dashboard" 
-                isActive={pathname === '/dashboard'} 
+                isActive={pathname === '/user/dashboard'} 
               />
               <NavButton 
-                href="/sessions" 
+                href="/user/sessions" 
                 icon={CalendarIcon} 
                 label="Sessions" 
-                isActive={pathname === '/sessions'} 
+                isActive={pathname === '/user/sessions'} 
               />
               <NavButton 
-                href="/profile" 
+                href="/user/profile" 
                 icon={UserCircle} 
                 label="Profile" 
-                isActive={pathname === '/profile'} 
+                isActive={pathname === '/user/profile'} 
               />
               <NavButton 
-                href="/interviewers" 
+                href="/user/interviewers" 
                 icon={Users} 
                 label="Interviewers" 
-                isActive={pathname === '/interviewers'} 
+                isActive={pathname === '/user/interviewers'} 
               />
               <NavButton 
-                href="/feedback" 
+                href="/user/feedback" 
                 icon={MessageSquare} 
                 label="Feedback" 
-                isActive={pathname === '/feedback'} 
+                isActive={pathname === '/user/feedback'} 
               />
             </div>
           )}
