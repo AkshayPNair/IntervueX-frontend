@@ -7,6 +7,9 @@ interface User {
     email: string;
     role: string;
     isApproved?:boolean;
+    profilePicture?: string;
+    resume?: string;
+    skills?: string[];
 }
 
 const initialState={
@@ -22,7 +25,6 @@ const authSlice=createSlice({
         },
         logout(state){
             state.user=null;
-            localStorage.removeItem('token')
         }
     }
 });
