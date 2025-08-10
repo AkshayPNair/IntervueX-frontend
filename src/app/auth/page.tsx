@@ -11,6 +11,8 @@ import { Navigation } from "../../components/navigation"
 import { Particle } from "../../components/ui/particle"
 import { useAuth } from '../../hooks/useAuth'
 import { Eye, EyeOff, CheckCircle } from "lucide-react"
+import GoogleLoginButton from "../../components/GoogleLoginButton"
+import RoleSelectionModal from "../../components/RoleSelectionModal"
 import { toast } from 'sonner'
 
 export default function Auth() {
@@ -28,6 +30,10 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const [showRoleModal, setShowRoleModal] = useState<boolean>(false)
+  const [googleUserName, setGoogleUserName] = useState<string>('')
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false)
 
   // Background particles
   const particles = Array.from({ length: 50 }, (_, i) => <Particle key={i} delay={i * 0.1} />)
@@ -61,6 +67,23 @@ export default function Auth() {
       })
     }
   }
+
+  const handleGoogleSuccess = (needsRoleSelection: boolean, userName: string) => {
+    if (needsRoleSelection) {
+      setGoogleUserName(userName)
+      setShowRoleModal(true)
+    } else {
+      toast.success('Successfully signed in with Google!')
+    }
+  }
+  const handleGoogleError = (error: string) => {
+    toast.error(error)
+  }
+
+  const handleRoleModalClose = () => {
+    setShowRoleModal(false)
+    setGoogleUserName('')
+   }
 
   const handleSubmit = async () => {
     const newErrors: { [key: string]: string } = {}
@@ -465,11 +488,40 @@ export default function Auth() {
                   </Button>
                 </motion.div>
 
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="relative"
+                >
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-[#30363D]" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-[#161B22] px-2 text-[#7D8590]">Or continue with</span>
+                  </div>
+                </motion.div>
+
+                {/* Google Login Button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <GoogleLoginButton
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    className="bg-[#0D1117]/80 border-[#30363D] text-[#E6EDF3] hover:bg-[#21262D] hover:border-[#BC8CFF]/50 backdrop-blur-sm"
+                  />
+                </motion.div>
+
                 {isLogin && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
+                    transition={{ delay: 0.4 }}
                     className="text-center"
                   >
                     <a href="/auth/forgot-password" className="text-[#BC8CFF] hover:text-[#BC8CFF]/80 text-sm transition-colors">
@@ -483,6 +535,12 @@ export default function Auth() {
         </div>
 
       </div>
+      <RoleSelectionModal
+        isOpen={showRoleModal}
+        onClose={handleRoleModalClose}
+        userName={googleUserName}
+        isLoading={isGoogleLoading}
+      />
     </>
   )
 }
