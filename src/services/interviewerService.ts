@@ -71,6 +71,7 @@ export interface InterviewerProfile{
         professionalBio?: string;
         technicalSkills: string[];
         resume?: string;
+        hourlyRate?: number;
     }
 }
 
@@ -82,6 +83,7 @@ export interface UpdateProfileData {
     professionalBio?: string;
     technicalSkills?: string[];
     resume?: string;
+    hourlyRate?: number;
 }
 
 export const getInterviewerProfile=async():Promise<InterviewerProfile>=>{
@@ -102,7 +104,7 @@ export const UpdateInterviewerProfile=async(
         if (value !== undefined && value !== null) {
             if (key === 'technicalSkills' && Array.isArray(value)) {
                 formData.append(key, JSON.stringify(value));
-            } else if (key === 'yearsOfExperience') {
+            } else if (key === 'yearsOfExperience' || key==='hourlyRate') {
                 formData.append(key, value.toString());
             } else if (typeof value === 'string') {
                 formData.append(key, value);

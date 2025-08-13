@@ -25,7 +25,8 @@ const Profile = () => {
     jobTitle: "",
     yearsOfExperience: 0,
     professionalBio: "",
-    technicalSkills: [] as string[]
+    technicalSkills: [] as string[],
+    hourlyRate:0
   });
   
   // File states
@@ -49,7 +50,8 @@ const Profile = () => {
         jobTitle: profileData.profile.jobTitle || "",
         yearsOfExperience: profileData.profile.yearsOfExperience || 0,
         professionalBio: profileData.profile.professionalBio || "",
-        technicalSkills: profileData.profile.technicalSkills || []
+        technicalSkills: profileData.profile.technicalSkills || [],
+        hourlyRate:profileData.profile.hourlyRate||0
       });
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -92,7 +94,8 @@ const Profile = () => {
         jobTitle: formData.jobTitle,
         yearsOfExperience: formData.yearsOfExperience,
         professionalBio: formData.professionalBio,
-        technicalSkills: formData.technicalSkills
+        technicalSkills: formData.technicalSkills,
+        hourlyRate: formData.hourlyRate
       };
 
       const files = {
@@ -338,6 +341,17 @@ const Profile = () => {
                       className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400 resize-none"
                     />
                     <p className="text-xs text-purple-300">Minimum 100 words required</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hourlyRate" className="text-white">Hourly Rate</Label>
+                    <Input 
+                      id="hourlyRate" 
+
+                      value={formData.hourlyRate}
+                      onChange={(e) => handleInputChange('hourlyRate', parseFloat(e.target.value) || 0)}
+                      placeholder="Enter your hourly rate in Rs"
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                    />
                   </div>
                 </div>
               </div>
