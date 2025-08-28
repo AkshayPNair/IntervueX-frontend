@@ -14,7 +14,8 @@ import {
   Code,
   Shield,
   UserCheck,
-  LogOut
+  LogOut,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'User Management', href: '/admin/users', icon: Users },
   { name: 'Session Monitor', href: '/admin/sessions', icon: Monitor },
   { name: 'Interview Requests', href: '/admin/requests', icon: UserCheck },
+  {name: 'Wallet', href:'/admin/wallet',icon: Wallet},
   { name: 'Compiler Logs', href: '/admin/compiler', icon: Code },
   { name: 'Feedback Review', href: '/admin/feedback', icon: MessageSquare },
   { name: 'Platform Config', href: '/admin/config', icon: Settings },

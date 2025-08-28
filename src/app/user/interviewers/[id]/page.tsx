@@ -122,7 +122,7 @@ export default function InterviewerProfilePage() {
                           <span className="text-[#E6EDF3] font-semibold text-lg">{selectedInterviewer.rating || 4.5}</span>
                           <span className="text-[#7D8590]">(25 reviews)</span>
                         </div>
-                        <div className="text-2xl font-bold text-[#BC8CFF]">${selectedInterviewer.hourlyRate || 150}/hr</div>
+                        <div className="text-2xl font-bold text-[#BC8CFF]">₹ {selectedInterviewer.hourlyRate}/hr</div>
                       </div>
                     </div>
                   </div>
@@ -207,7 +207,7 @@ export default function InterviewerProfilePage() {
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[#7D8590]">Hourly Rate</span>
-                      <span className="text-[#BC8CFF] font-semibold text-lg">${selectedInterviewer.hourlyRate || 150}/hr</span>
+                      <span className="text-[#BC8CFF] font-semibold text-lg">₹ {selectedInterviewer.hourlyRate}/hr</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[#7D8590]">Rating</span>
@@ -234,7 +234,7 @@ export default function InterviewerProfilePage() {
                   <h3 className="text-[#E6EDF3] font-semibold text-lg mb-2">Quick Book</h3>
                   <p className="text-[#7D8590] text-sm mb-4">Book a session with {selectedInterviewer.name}</p>
                   <Button
-                    onClick={() => setShowBookingModal(true)}
+                    onClick={() => router.push(`/user/book-session/${selectedInterviewer.id}`)}
                     className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80 text-white font-medium transition-all duration-300"
                   >
                     Book Session

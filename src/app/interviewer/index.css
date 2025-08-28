@@ -178,10 +178,22 @@
     -webkit-text-fill-color: transparent;
     animation: gradient-shift 3s ease-in-out infinite;
   }
+
+  .text-gradient-static {
+    background: linear-gradient(45deg, #BC8CFF, #5C0080, #320050);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
   
   .text-glow {
     color: #BC8CFF;
     text-shadow: 0 0 10px rgba(188, 140, 255, 0.5);
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(188, 140, 255, 0.5) transparent;
   }
   
   /* Particle Effects */

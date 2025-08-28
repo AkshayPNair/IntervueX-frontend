@@ -25,7 +25,8 @@ const Profile = () => {
     jobTitle: "",
     yearsOfExperience: 0,
     professionalBio: "",
-    technicalSkills: [] as string[]
+    technicalSkills: [] as string[],
+    hourlyRate:0
   });
   
   // File states
@@ -49,7 +50,8 @@ const Profile = () => {
         jobTitle: profileData.profile.jobTitle || "",
         yearsOfExperience: profileData.profile.yearsOfExperience || 0,
         professionalBio: profileData.profile.professionalBio || "",
-        technicalSkills: profileData.profile.technicalSkills || []
+        technicalSkills: profileData.profile.technicalSkills || [],
+        hourlyRate:profileData.profile.hourlyRate||0
       });
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -83,16 +85,43 @@ const Profile = () => {
     }));
   };
 
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
+    if (!formData.name.trim()) errors.push("Name is required");
+    if (!formData.jobTitle.trim()) errors.push("Job title is required");
+    if (!Number.isInteger(formData.yearsOfExperience) || formData.yearsOfExperience < 0 || formData.yearsOfExperience > 30) {
+      errors.push("Years of experience must be an integer between 0 and 30");
+    }
+    if (!formData.professionalBio.trim()) errors.push("Professional bio is required");
+    if (!Array.isArray(formData.technicalSkills) || formData.technicalSkills.length === 0) {
+      errors.push("At least one technical skill is required");
+    }
+    if (!Number.isInteger(formData.hourlyRate) || formData.hourlyRate < 0) {
+      errors.push("Hourly rate must be a non-negative integer");
+    }
+    return errors;
+  };
+
+
+    
+    
+
   const handleSave = async () => {
     try {
       setSaving(true);
+      const errors = validateForm();
+    if (errors.length > 0) {
+      toast.error(errors[0]);
+      return;
+    }
       
       const updateData: UpdateProfileData = {
         name: formData.name,
         jobTitle: formData.jobTitle,
         yearsOfExperience: formData.yearsOfExperience,
         professionalBio: formData.professionalBio,
-        technicalSkills: formData.technicalSkills
+        technicalSkills: formData.technicalSkills,
+        hourlyRate: formData.hourlyRate
       };
 
       const files = {
@@ -138,7 +167,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen gradient-bg relative flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative flex items-center justify-center">
         <ParticleBackground />
         <div className="flex items-center space-x-2 text-white">
           <Loader2 className="w-6 h-6 animate-spin" />
@@ -150,7 +179,7 @@ const Profile = () => {
 
 
   return (
-    <div className="min-h-screen gradient-bg relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
       <ParticleBackground />
       
       <main className="container mx-auto px-6 py-8 relative z-10">
@@ -323,7 +352,7 @@ const Profile = () => {
                       id="yearsExperience" 
                       type="number" 
                      value={formData.yearsOfExperience}
-                      onChange={(e) => handleInputChange('yearsOfExperience', parseInt(e.target.value) || 0)}
+                     onChange={(e) => handleInputChange('yearsOfExperience', Math.floor(Number(e.target.value) || 0))}
                       className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
                     />
                   </div>
@@ -338,6 +367,17 @@ const Profile = () => {
                       className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400 resize-none"
                     />
                     <p className="text-xs text-purple-300">Minimum 100 words required</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hourlyRate" className="text-white">Hourly Rate</Label>
+                    <Input 
+                      id="hourlyRate" 
+                      type="number"
+                      value={formData.hourlyRate}
+                      onChange={(e) => handleInputChange('hourlyRate', Math.floor(Number(e.target.value) || 0))}
+                      placeholder="Enter your hourly rate in Rs"
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                    />
                   </div>
                 </div>
               </div>

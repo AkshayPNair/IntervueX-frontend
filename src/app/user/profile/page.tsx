@@ -109,8 +109,21 @@ export default function ProfilePage() {
      }
    }
 
+   const validateUserForm = (): string[] => {
+    const errors: string[] = [];
+    if (!name.trim()) errors.push('Name is required');
+    if (!Array.isArray(skills) || skills.length === 0) errors.push('At least one skill is required');
+    return errors;
+  };
+
   const handleSaveChanges = async () => {
     if (!profile) return
+
+    const errors = validateUserForm();
+    if (errors.length > 0) {
+      toast.error(errors[0]);
+      return;
+    }
 
     setSaving(true)
     try {

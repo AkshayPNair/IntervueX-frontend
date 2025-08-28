@@ -146,7 +146,7 @@ const InterviewerVerification = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen gradient-bg relative">
+            <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
                 <div className="particle-container">
                     {[...Array(20)].map((_, i) => (
                         <div
@@ -169,7 +169,7 @@ const InterviewerVerification = () => {
 
     if (isSubmitted) {
         return (
-            <div className="min-h-screen gradient-bg relative">
+            <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
                 {/* Particle Background */}
                 <div className="particle-container">
                     {[...Array(20)].map((_, i) => (
