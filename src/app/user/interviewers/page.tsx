@@ -18,23 +18,67 @@ import {
   Plus,
   User,
   Clock,
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
+import { Checkbox } from "@/components/ui/checkbox"
 
-
+interface FilterState {
+  rating: [number, number]
+  hourlyRate: [number, number]
+  skills: string[]
+}
 
 export default function InterviewersPage() {
   const router = useRouter()
   const [interviewers, setInterviewers] = useState<InterviewerProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerProfile | null>(null)
-  const [showBookingModal, setShowBookingModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filters, setFilters] = useState<FilterState>({
+    rating: [0, 5],
+    hourlyRate: [0, 10000],
+    skills: []
+  })
+
+  // Get unique skills from all interviewers
+  const allSkills = Array.from(
+    new Set(
+      interviewers.flatMap(interviewer => interviewer.technicalSkills || [])
+    )
+  ).sort()
 
   useEffect(() => {
     const fetchInterviewers = async () => {
       try {
         const data = await getAllInterviewers()
         setInterviewers(data)
+        
+        // Set initial filter ranges based on data
+        if (data.length > 0) {
+          const rates = data.map(i => i.hourlyRate || 0)
+          const minRate = Math.min(...rates)
+          const maxRate = Math.max(...rates)
+          
+          setFilters(prev => ({
+            ...prev,
+            hourlyRate: [minRate, maxRate]
+          }))
+        }
       } catch (error) {
         console.error('Error fetching interviewers:', error)
         toast.error('Failed to load interviewers')
@@ -46,16 +90,74 @@ export default function InterviewersPage() {
     fetchInterviewers()
   }, [])
 
-  const filteredInterviewers = interviewers.filter(interviewer => {
-    const query = searchQuery.toLowerCase()
-    return (
-      interviewer.name.toLowerCase().includes(query) ||
-      interviewer.jobTitle?.toLowerCase().includes(query) ||
-      interviewer.technicalSkills?.some(skill => 
-        skill.toLowerCase().includes(query)
+  const applyFilters = (interviewer: InterviewerProfile) => {
+    // Rating filter
+    const rating = interviewer.rating || 4.5
+    if (rating < filters.rating[0] || rating > filters.rating[1]) {
+      return false
+    }
+
+    // Hourly rate filter
+    const hourlyRate = interviewer.hourlyRate || 0
+    if (hourlyRate < filters.hourlyRate[0] || hourlyRate > filters.hourlyRate[1]) {
+      return false
+    }
+
+    // Skills filter
+    if (filters.skills.length > 0) {
+      const interviewerSkills = interviewer.technicalSkills || []
+      const hasMatchingSkill = filters.skills.some(skill => 
+        interviewerSkills.some(interviewerSkill => 
+          interviewerSkill.toLowerCase().includes(skill.toLowerCase())
+        )
       )
+      if (!hasMatchingSkill) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const filteredInterviewers = interviewers
+    .filter(applyFilters)
+    .filter(interviewer => {
+      const query = searchQuery.toLowerCase()
+      return (
+        interviewer.name.toLowerCase().includes(query) ||
+        interviewer.jobTitle?.toLowerCase().includes(query) ||
+        interviewer.technicalSkills?.some(skill => 
+          skill.toLowerCase().includes(query)
+        )
+      )
+    })
+
+  const clearFilters = () => {
+    
+    const rates = interviewers.map(i => i.hourlyRate || 0)
+    const minRate = Math.min(...rates)
+    const maxRate = Math.max(...rates)
+    
+    setFilters({
+      rating: [0, 5],
+      hourlyRate: [minRate, maxRate],
+      skills: []
+    })
+  }
+
+  const hasActiveFilters = () => {
+    const rates = interviewers.map(i => i.hourlyRate || 0)
+    const minRate = Math.min(...rates)
+    const maxRate = Math.max(...rates)
+    
+    return (
+      filters.rating[0] > 0 || 
+      filters.rating[1] < 5 ||
+      filters.hourlyRate[0] > minRate ||
+      filters.hourlyRate[1] < maxRate ||
+      filters.skills.length > 0
     )
-  })
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
@@ -88,11 +190,173 @@ export default function InterviewersPage() {
                     className="pl-10 bg-[#0D1117] border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF] w-64"
                   />
                 </div>
-                <Button variant="outline" className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10 bg-transparent">
-                  Filter
-                </Button>
+                
+                <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className={`border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10 bg-transparent relative ${
+                        hasActiveFilters() ? 'bg-[#BC8CFF]/20' : ''
+                      }`}
+                    >
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filter
+                      {hasActiveFilters() && (
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#BC8CFF] rounded-full"></div>
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-[#0D1117] border-[#30363D] text-[#E6EDF3] max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-[#E6EDF3]">Filter Interviewers</DialogTitle>
+                      <DialogDescription className="text-[#7D8590]">
+                        Narrow down your search by rating, hourly rate, and skills.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 py-4">
+                      {/* Rating Filter */}
+                      <div className="space-y-3">
+                        <Label className="text-[#E6EDF3] font-medium">Rating Range</Label>
+                        <div className="px-2">
+                          <Slider
+                            value={filters.rating}
+                            onValueChange={(value) => setFilters({...filters, rating: value as [number, number]})}
+                            max={5}
+                            min={0}
+                            step={0.1}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-sm text-[#7D8590] mt-1">
+                            <span>{filters.rating[0]}★</span>
+                            <span>{filters.rating[1]}★</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hourly Rate Filter */}
+                      <div className="space-y-3">
+                        <Label className="text-[#E6EDF3] font-medium">Hourly Rate (₹)</Label>
+                        <div className="px-2">
+                          <Slider
+                            value={filters.hourlyRate}
+                            onValueChange={(value) => setFilters({...filters, hourlyRate: value as [number, number]})}
+                            max={interviewers.length > 0 ? Math.max(...interviewers.map(i => i.hourlyRate || 0)) : 10000}
+                            min={interviewers.length > 0 ? Math.min(...interviewers.map(i => i.hourlyRate || 0)) : 0}
+                            step={100}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-sm text-[#7D8590] mt-1">
+                            <span>₹{filters.hourlyRate[0]}</span>
+                            <span>₹{filters.hourlyRate[1]}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Skills Filter */}
+                      <div className="space-y-3">
+                        <Label className="text-[#E6EDF3] font-medium">Technical Skills</Label>
+                        <div className="max-h-48 overflow-y-auto space-y-2 border border-[#30363D] rounded-lg p-3 bg-[#161B22]/50">
+                          {allSkills.map((skill) => (
+                            <div key={skill} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={skill}
+                                checked={filters.skills.includes(skill)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFilters({...filters, skills: [...filters.skills, skill]})
+                                  } else {
+                                    setFilters({...filters, skills: filters.skills.filter(s => s !== skill)})
+                                  }
+                                }}
+                                className="border-[#30363D] data-[state=checked]:bg-[#BC8CFF] data-[state=checked]:border-[#BC8CFF]"
+                              />
+                              <Label htmlFor={skill} className="text-sm text-[#E6EDF3] cursor-pointer">
+                                {skill}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        {filters.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {filters.skills.map((skill) => (
+                              <Badge 
+                                key={skill} 
+                                variant="outline" 
+                                className="border-[#BC8CFF] text-[#BC8CFF] text-xs"
+                              >
+                                {skill}
+                                <button
+                                  onClick={() => setFilters({...filters, skills: filters.skills.filter(s => s !== skill)})}
+                                  className="ml-1 hover:text-red-400"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <DialogFooter className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        onClick={clearFilters}
+                        className="border-[#7D8590] text-[#7D8590] hover:bg-[#30363D]/50 bg-transparent"
+                      >
+                        Clear All
+                      </Button>
+                      <Button
+                        onClick={() => setIsFilterOpen(false)}
+                        className="bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80"
+                      >
+                        Apply Filters
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
+
+            {/* Active Filters Display */}
+            {hasActiveFilters() && (
+              <div className="flex items-center space-x-2 flex-wrap">
+                <span className="text-[#7D8590] text-sm">Active filters:</span>
+                {(filters.rating[0] > 0 || filters.rating[1] < 5) && (
+                  <Badge variant="outline" className="border-[#BC8CFF] text-[#BC8CFF] text-xs">
+                    Rating: {filters.rating[0]}★ - {filters.rating[1]}★
+                    <button
+                      onClick={() => setFilters({...filters, rating: [0, 5]})}
+                      className="ml-1 hover:text-red-400"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.skills.map((skill) => (
+                  <Badge key={skill} variant="outline" className="border-[#BC8CFF] text-[#BC8CFF] text-xs">
+                    {skill}
+                    <button
+                      onClick={() => setFilters({...filters, skills: filters.skills.filter(s => s !== skill)})}
+                      className="ml-1 hover:text-red-400"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+                {hasActiveFilters() && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="text-[#7D8590] hover:text-[#E6EDF3] text-xs p-1"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            )}
 
             {loading ? (
               <div className="flex justify-center items-center py-12">
@@ -102,8 +366,23 @@ export default function InterviewersPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="text-[#7D8590] text-lg mb-2">No interviewers found</div>
                 <div className="text-[#7D8590] text-sm">
-                  {searchQuery ? `No results for "${searchQuery}"` : "No interviewers available"}
+                  {searchQuery || hasActiveFilters() ? 
+                    `No results for your search criteria` : 
+                    "No interviewers available"
+                  }
                 </div>
+                {(searchQuery || hasActiveFilters()) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery("")
+                      clearFilters()
+                    }}
+                    className="mt-4 border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10 bg-transparent"
+                  >
+                    Clear search and filters
+                  </Button>
+                )}
               </div>  
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -145,7 +424,7 @@ export default function InterviewersPage() {
                             <span className="text-[#E6EDF3] font-semibold">{interviewer.rating || 4.5}</span>
                             <span className="text-[#7D8590] text-sm">(25 reviews)</span>
                           </div>
-                          <div className="text-[#BC8CFF] font-semibold">${interviewer.hourlyRate || 150}/hr</div>
+                          <div className="text-[#BC8CFF] font-semibold">₹ {interviewer.hourlyRate}/hr</div>
                         </div>
                         <div>
                           {/* Experience */}
@@ -153,10 +432,7 @@ export default function InterviewersPage() {
                             {interviewer.yearsOfExperience ? `${interviewer.yearsOfExperience} years experience` : '8 years experience'}
                           </div>
 
-
-
                           <div>
-
                             <div className="flex flex-wrap gap-1 mt-2 ">
                               {interviewer.technicalSkills?.slice(0, 3).map((skill, i) => (
                                 <Badge key={i} variant="outline" className="border-[#58A6FF] text-[#58A6FF] text-xs">
@@ -185,7 +461,7 @@ export default function InterviewersPage() {
                             className="flex-1 bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80"
                             onClick={() => {
                               setSelectedInterviewer(interviewer)
-                              setShowBookingModal(true)
+                              router.push(`/user/book-session/${interviewer.id}`)
                             }}
                           >
                             Book Session

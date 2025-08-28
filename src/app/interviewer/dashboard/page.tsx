@@ -135,7 +135,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen gradient-bg relative">
+      <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
         <ParticleBackground />
         <main className="container mx-auto px-6 py-20 relative z-10 flex items-center justify-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-500"></div>
@@ -147,7 +147,7 @@ const Dashboard = () => {
   // Don't render dashboard if not approved
   if (!verificationStatus?.isApproved) {
     return (
-      <div className="min-h-screen gradient-bg relative">
+      <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
         <ParticleBackground />
         <main className="container mx-auto px-6 py-20 relative z-10 flex items-center justify-center">
           <div className="text-white text-xl">Redirecting...</div>
@@ -165,7 +165,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen gradient-bg relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
       <ParticleBackground />
 
 

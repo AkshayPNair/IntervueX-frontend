@@ -37,7 +37,8 @@ const Navigation = () => {
     { href: "/interviewer/dashboard", label: "Dashboard", icon: Calendar },
     { href: "/interviewer/sessions", label: "Sessions", icon: Video },
     { href: "/interviewer/profile", label: "Profile", icon: User },
-    { href: "/interviewer/add-slots", label: "Add Slots", icon: Clock },
+    { href: "/interviewer/add-slots", label: "Add Slots", icon: Calendar},
+    { href: "/interviewer/wallet", label: "Wallet", icon: Clock},
     { href: "/interviewer/history", label: "History", icon: Clock },
     { href: "/interviewer/settings", label: "Settings", icon: Settings }
   ];

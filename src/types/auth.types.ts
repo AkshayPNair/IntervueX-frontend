@@ -5,6 +5,11 @@ export interface SignupUserData {
     role: "user" | "interviewer" | "admin";
 }
 
+export interface SignupResponse {
+    message: string;
+    user?: User;
+}
+
 export interface SignupInterviewerData {
      profilePic?: string;
     jobTitle?: string;

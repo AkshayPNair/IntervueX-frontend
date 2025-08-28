@@ -1,0 +1,373 @@
+"use client"
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ReusableTable, TableColumn } from '@/components/ui/ReusableTable';
+import { useAdminWallet } from '@/hooks/useAdminWallet';
+import { WalletTransaction } from '@/types/wallet.types';
+import {
+  Wallet as WalletIcon,
+  TrendingUp,
+  DollarSign,
+  Search,
+  Filter,
+  Download,
+  Calendar,
+  CreditCard,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Eye,
+  MoreHorizontal,
+  User,
+  Award,
+  IndianRupeeIcon,
+
+} from 'lucide-react';
+
+const getUserName = (transaction: WalletTransaction): string => {
+  return transaction.userName || `User ${transaction.userId?.slice(-4) || 'Unknown'}`
+};
+
+
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return {
+    date: date.toLocaleDateString(),
+    time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15
+    }
+  }
+};
+
+export default function Wallet() {
+  const { summary, transactions, loading, error } = useAdminWallet();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [dateFilter, setDateFilter] = useState<string>('All');
+
+  // Calculate totals
+  const totalEarnings =transactions
+  .filter(t => t.type === 'credit')
+  .reduce((sum, t) => sum + (t.adminFee || 0), 0);
+  const thisMonthEarnings = transactions
+    .filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth() && t.type === 'credit')
+    .reduce((sum, t) => sum + (t.adminFee || 0), 0);
+
+  // Totals for gross amount and commission
+  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const thisMonthAmount = transactions
+    .filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth())
+    .reduce((sum, t) => sum + t.amount, 0);
+    const totalCommission = transactions.reduce((sum, t) => sum + (t.adminFee || 0), 0);
+  const thisMonthCommission = transactions
+    .filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth())
+    .reduce((sum, t) => sum + (t.adminFee || 0), 0);
+
+  const filteredTransactions = transactions.filter(transaction => {
+    const userName = getUserName(transaction);
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.bookingId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' ||
+      (statusFilter === 'Credit' && transaction.type === 'credit') ||
+      (statusFilter === 'Debit' && transaction.type === 'debit');
+
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusColor = (status: string) => {
+    return status === 'Credit'
+      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+      : 'bg-gradient-to-r from-red-500 to-rose-500 text-white';
+  };
+
+  const getStatusIcon = (status: string) => {
+    return status === 'Credit' ? ArrowUpRight : ArrowDownLeft;
+  };
+
+  return (
+    <motion.div
+      className="space-y-6 p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Header */}
+      <motion.div
+        className="flex items-center justify-between"
+        variants={itemVariants}
+      >
+        <div>
+          <h1 className="text-4xl font-bold gradient-text">Admin Wallet</h1>
+          <p className="text-gray-400 mt-2">Track your commission earnings and transaction history</p>
+        </div>
+
+      </motion.div>
+
+      {/* Earnings Cards */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 gap-8"
+        variants={containerVariants}
+      >
+        {/* Total Earnings Card */}
+        <motion.div
+          className="glass-card rounded-2xl p-8 relative overflow-hidden"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center pulse-glow">
+                <WalletIcon className="w-8 h-8 text-white" />
+              </div>
+              <motion.div
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+              >
+                <TrendingUp className="w-6 h-6 text-green-400" />
+              </motion.div>
+            </div>
+            <div>
+              <p className="text-gray-400 text-lg font-medium mb-2">Total Earnings</p>
+              <motion.p
+                className="text-4xl font-bold text-green-400 glow-text mb-2"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+              >
+                ₹{totalEarnings.toLocaleString('en-IN')}
+              </motion.p>
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <span className="text-sm text-gray-300">Total Amount: <span className="font-semibold text-white">₹{totalAmount.toLocaleString('en-IN')}</span></span>
+                <span className="text-sm text-gray-300">Commission: <span className="font-semibold text-yellow-400">₹{totalCommission.toLocaleString('en-IN')}</span></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-green-400 text-sm font-medium">↗ +12.5%</span>
+                <span className="text-gray-400 text-sm">from last month</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* This Month Earnings Card */}
+        <motion.div
+          className="glass-card rounded-2xl p-8 relative overflow-hidden"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center pulse-glow">
+                <Calendar className="w-8 h-8 text-white" />
+              </div>
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+              >
+                <IndianRupeeIcon className="w-6 h-6 text-blue-400" />
+              </motion.div>
+            </div>
+            <div>
+              <p className="text-gray-400 text-lg font-medium mb-2">This Month</p>
+              <motion.p
+                className="text-4xl font-bold text-green-400 glow-text mb-2"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+              >
+                ₹{thisMonthEarnings.toLocaleString('en-IN')}
+              </motion.p>
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <span className="text-sm text-gray-300">Amount: <span className="font-semibold text-white">₹{thisMonthAmount.toLocaleString('en-IN')}</span></span>
+                <span className="text-sm text-gray-300">Commission: <span className="font-semibold text-yellow-400">₹{thisMonthCommission.toLocaleString('en-IN')}</span></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-400 text-sm font-medium">January 2024</span>
+                <span className="text-gray-400 text-sm">• {transactions.filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth()).length} transactions</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Filters */}
+      <motion.div
+        className="glass-card rounded-xl p-6"
+        variants={itemVariants}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+            <motion.input
+              type="text"
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 input-glow rounded-lg text-white placeholder-gray-400 focus:outline-none text-lg"
+              whileFocus={{ scale: 1.02 }}
+            />
+          </div>
+
+          <motion.select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
+            whileFocus={{ scale: 1.02 }}
+          >
+            <option value="All">All Status</option>
+            <option value="Credit">Credit</option>
+            <option value="Debit">Debit</option>
+          </motion.select>
+
+          <motion.select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
+            whileFocus={{ scale: 1.02 }}
+          >
+            <option value="All">All Time</option>
+            <option value="Today">Today</option>
+            <option value="Week">This Week</option>
+            <option value="Month">This Month</option>
+          </motion.select>
+        </div>
+      </motion.div>
+
+      {/* Transaction Table */}
+      <motion.div
+        className="table-glow rounded-xl overflow-hidden"
+        variants={itemVariants}
+      >
+        <div className="px-8 py-6 border-b border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-white">Transaction History</h2>
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-400">Total: {filteredTransactions.length} transactions</span>
+              <motion.button
+                className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+            <span className="ml-3 text-purple-300">Loading transactions...</span>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <span className="text-red-400">{error}</span>
+          </div>
+        ) : (() => {
+          const INR = (v: number) => `₹${v.toLocaleString('en-IN')}`;
+          type Row = typeof filteredTransactions[0] & { seq: number };
+          const tableData: Row[] = filteredTransactions.map((t, i) => ({ ...t, seq: i + 1 }));
+
+          const columns: TableColumn<Row>[] = [
+            {
+              key: 'id',
+              header: 'ID',
+              width: '80px',
+              render: (item) => <span className="text-purple-300 font-semibold">{item.seq}</span>,
+            },
+            {
+              key: 'name',
+              header: 'Name',
+              render: (item) => {
+                const userName = getUserName(item);
+                const { time } = formatDateTime(item.createdAt);
+                return (
+                  <div className="flex flex-col">
+                    <div className="text-white font-medium">{userName}</div>
+                    <span className="text-xs text-gray-400 mt-1">{time}</span>
+                  </div>
+                );
+              },
+            },
+            {
+              key: 'reason',
+              header: 'Reason',
+              render: (item) => <span className="text-purple-300">{item.reason}  </span>,
+            },
+            {
+              key: 'amount',
+              header: 'Amount',
+              render: (item) => <span className="text-white font-semibold">{INR(item.amount)}</span>,
+            },
+            {
+              key: 'commission',
+              header: 'Commission',
+              render: (item) => <span className="text-yellow-400 font-semibold">{INR(item.adminFee || 0)}</span>,
+            },
+            {
+              key: 'yourEarning',
+              header: 'Your Earning',
+              render: (item) => (
+                <span className={
+                  item.type === 'debit' ? 'text-red-400 font-bold' : 'text-green-400 font-bold'
+                }>
+                  {INR(item.adminFee || 0)}
+                </span>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              render: (item) => (
+                <span
+                  className={
+                    'inline-flex px-3 py-1 rounded-full text-sm font-semibold ' +
+                    (item.type === 'credit'
+                      ? 'bg-green-500/10 text-green-400 ring-1 ring-green-500/30'
+                      : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/30')
+                  }
+                >
+                  {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                </span>
+              ),
+            },
+          ];
+
+          return (
+            <ReusableTable<Row>
+              data={tableData}
+              columns={columns}
+              variant="admin"
+              emptyMessage="No transactions found"
+            />
+          );
+        })()}
+      </motion.div>
+
+
+    </motion.div>
+  );
+}

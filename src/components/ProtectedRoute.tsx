@@ -65,7 +65,7 @@ export const ProtectedRoute=({
                     }
                     break
                 case 'user':
-                    router.push('/dashboard')
+                    router.push('/user/dashboard')
                     break
                 default:
                     router.push(fallbackPath)            

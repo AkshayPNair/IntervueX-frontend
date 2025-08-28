@@ -38,6 +38,13 @@ export default function Auth() {
   // Background particles
   const particles = Array.from({ length: 50 }, (_, i) => <Particle key={i} delay={i * 0.1} />)
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
@@ -328,6 +335,7 @@ export default function Auth() {
                             setFormData({ ...formData, name: e.target.value })
                             clearError('name')
                           }}
+                          onKeyPress={handleKeyPress}
                           className={`bg-[#0D1117]/80 border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF] focus:ring-[#BC8CFF]/20 h-12 text-lg backdrop-blur-sm transition-all duration-300 ${errors.name ? 'border-[#FF7B72]' : ''
                             }`}
                         />
@@ -349,6 +357,7 @@ export default function Auth() {
                           setFormData({ ...formData, email: e.target.value })
                           clearError('email')
                         }}
+                        onKeyPress={handleKeyPress}
                         className={`bg-[#0D1117]/80 border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF] focus:ring-[#BC8CFF]/20 h-12 text-lg backdrop-blur-sm transition-all duration-300 ${errors.email ? 'border-[#FF7B72]' : isEmailValid ? 'border-[#3FB950]' : ''
                           }`}
                       />
@@ -369,6 +378,7 @@ export default function Auth() {
                           setFormData({ ...formData, password: e.target.value })
                           clearError('password')
                         }}
+                        onKeyPress={handleKeyPress}
                         className={`bg-[#0D1117]/80 border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF] focus:ring-[#BC8CFF]/20 h-12 text-lg backdrop-blur-sm transition-all duration-300 pr-12 ${errors.password ? 'border-[#FF7B72]' : ''
                           }`}
                       />
@@ -431,6 +441,7 @@ export default function Auth() {
                               setFormData({ ...formData, confirmPassword: e.target.value })
                               clearError('confirmPassword')
                             }}
+                            onKeyPress={handleKeyPress}
                             className={`bg-[#0D1117]/80 border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF] focus:ring-[#BC8CFF]/20 h-12 text-lg backdrop-blur-sm transition-all duration-300 pr-12 ${errors.confirmPassword ? 'border-[#FF7B72]' : doPasswordsMatch ? 'border-[#3FB950]' : ''
                               }`}
                           />

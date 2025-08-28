@@ -11,7 +11,8 @@ import {
   Users,
   MessageSquare,
   LogOut,                                                                                                                                                                                                                                                                                                                                                                                           
-  CalendarIcon,                                                                                                                                                                                                                   
+  CalendarIcon,
+  Wallet,                                                                                                                                                                                                                   
 } from "lucide-react"
 import {useAuth} from '../hooks/useAuth'
 
@@ -88,6 +89,12 @@ export const Navigation = ({ isLoggedIn = false, onLogout }: NavigationProps) =>
                 isActive={pathname === '/user/profile'} 
               />
               <NavButton 
+                href="/user/wallet" 
+                icon={Wallet} 
+                label="Wallet" 
+                isActive={pathname === '/user/wallet'} 
+              />
+              <NavButton 
                 href="/user/interviewers" 
                 icon={Users} 
                 label="Interviewers" 
@@ -99,6 +106,7 @@ export const Navigation = ({ isLoggedIn = false, onLogout }: NavigationProps) =>
                 label="Feedback" 
                 isActive={pathname === '/user/feedback'} 
               />
+
             </div>
           )}
 

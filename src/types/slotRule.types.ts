@@ -19,3 +19,15 @@ export interface SlotRuleResponse{
     createdAt:string;
     updatedAt:string;
 }
+
+export interface TimeSlot{
+    startTime:string;
+    endTime:string;
+    available:boolean;
+}
+
+export interface AvailableSlotResponse{
+    date:string;
+    weekday:string;
+    slots:TimeSlot[];
+}

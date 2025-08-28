@@ -94,7 +94,7 @@ const previewSlots = useMemo(() => {
 
 if (loading) {
     return (
-      <div className="min-h-screen gradient-bg relative flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative flex items-center justify-center">
         <ParticleBackground />
         <div className="flex items-center gap-3 text-white">
           <Loader2 className="w-6 h-6 animate-spin" />
@@ -105,7 +105,7 @@ if (loading) {
   }
 
 return (
-  <div className="min-h-screen gradient-bg relative">
+  <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
     <ParticleBackground />
 
     <main className="container mx-auto px-6 py-8 relative z-10">

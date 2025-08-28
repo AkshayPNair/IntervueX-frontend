@@ -2,7 +2,7 @@ import {useDispatch, useSelector} from 'react-redux';
 import {login as loginService, signup as signupService, logout as logoutService,forgetPassword as forgetPasswordService, resetPassword as resetPasswordService,googleLogin as googleLoginService, selectRole as selectRoleService} from '../services/authService'
 import { setUser } from '../store/authSlice';
 import { RootState } from '../store/index';
-import { SignupUserData, SignupInterviewerData,GoogleLoginDTO, RoleSelectionDTO } from '../types/auth.types';
+import { SignupUserData, SignupInterviewerData,GoogleLoginDTO, RoleSelectionDTO,SignupResponse } from '../types/auth.types';
 
 
 export const useAuth=()=>{
@@ -15,7 +15,7 @@ export const useAuth=()=>{
         return user;
     }
 
-    const signup=async(userData:SignupUserData,interviewerData?:SignupInterviewerData)=>{
+    const signup=async(userData:SignupUserData,interviewerData?:SignupInterviewerData):Promise<SignupResponse>=>{
         const result=await signupService(userData,interviewerData);
         return result
     }
