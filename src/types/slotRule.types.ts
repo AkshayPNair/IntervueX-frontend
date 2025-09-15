@@ -6,9 +6,15 @@ export interface DaySlotRule{
     enabled:boolean;
 }
 
+export interface ExcludedTimeSlot{
+    startTime:string;
+    endTime:string;
+}
+
 export interface SaveSlotRuleData{
     slotRules:DaySlotRule[];
     blockedDates:string[];
+    excludedSlotsByDate?: Record<string, ExcludedTimeSlot[]>;
 }
 
 export interface SlotRuleResponse{
@@ -16,6 +22,7 @@ export interface SlotRuleResponse{
     interviewerId:string;
     slotRules:DaySlotRule[];
     blockedDates:string[];
+    excludedSlotsByDate?: Record<string, ExcludedTimeSlot[]>;
     createdAt:string;
     updatedAt:string;
 }

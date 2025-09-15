@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {useState,useEffect} from "react";
 import { Button } from "@/components/ui/button";
-import { Code, User, Settings, LogOut, Calendar, Clock, Video } from "lucide-react";
+import { Code, User, Settings, LogOut, Calendar, Clock, Video, MessageCircleMore } from "lucide-react";
 import { useAuth } from '../hooks/useAuth'
 import { getVerificationStatus, VerificationStatusData } from "../services/interviewerService";
 
@@ -38,8 +38,9 @@ const Navigation = () => {
     { href: "/interviewer/sessions", label: "Sessions", icon: Video },
     { href: "/interviewer/profile", label: "Profile", icon: User },
     { href: "/interviewer/add-slots", label: "Add Slots", icon: Calendar},
+    { href: "/interviewer/chat", label: "Chat", icon: MessageCircleMore},
     { href: "/interviewer/wallet", label: "Wallet", icon: Clock},
-    { href: "/interviewer/history", label: "History", icon: Clock },
+    { href: "/interviewer/feedback", label: "History", icon: Clock },
     { href: "/interviewer/settings", label: "Settings", icon: Settings }
   ];
 

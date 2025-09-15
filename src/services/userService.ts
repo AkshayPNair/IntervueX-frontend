@@ -1,4 +1,5 @@
 import api from './api'
+import { FeedbackResponseData, SubmitInterviewerRatingData } from '@/types/feedback.types';
 
 export interface UserProfile{
     id:string,
@@ -71,3 +72,23 @@ export const getInterviewerById = async (id: string): Promise<InterviewerProfile
   const response = await api.get(`/user/interviewers/${id}`);
   return response.data;
 };
+
+export const listUserFeedbacks = async (): Promise<FeedbackResponseData[]> => {
+  const response = await api.get('/user/feedback');
+  return response.data;
+};
+
+export const getUserFeedbackById = async (id: string): Promise<FeedbackResponseData> => {
+  const response = await api.get(`/user/feedback/${id}`);
+  return response.data;
+};
+
+export const submitInterviewerRating=async(data:SubmitInterviewerRatingData):Promise<SubmitInterviewerRatingData>=>{
+  const response = await api.post('/user/rating', data);
+  return response.data;
+}
+
+export const getInterviewerRatingByBooking = async (bookingId: string) => {
+  const response = await api.get(`/user/rating/${bookingId}`)
+  return response.data
+}

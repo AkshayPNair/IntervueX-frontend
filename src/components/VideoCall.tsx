@@ -19,12 +19,15 @@ import {
   Send,
   X,
   MoreVertical,
-  Smile
+  Smile,
+  Star
 } from 'lucide-react';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { useCompleteBooking } from '@/hooks/useCompleteBooking';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserBookings, getInterviewerBookings } from '@/services/bookingService';
+import { useRouter } from 'next/navigation';
+import { useSubmitInterviewerRating } from '@/hooks/useSubmitInterviewerRating';
 
 interface VideoCallProps {
   roomId?: string;
@@ -39,11 +42,18 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
+  
+  const [showRating, setShowRating] = useState(false);
+  const [rating, setRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState(0); 
+  const [comment, setComment] = useState<string>('');
+  const { submit: submitRating, loading: ratingLoading } = useSubmitInterviewerRating();
 
   // Determine local user info for labels and identity
   const signalingUrl = process.env.NEXT_PUBLIC_URL || ''
   const { localVideoRef, remoteVideoRef, toggleAudio, toggleVideo, messages: rtcMessages, sendChat, remoteJoined, remoteVideoOn } = useWebRTC(_roomId ?? 'default-room', signalingUrl)
   const { completeSession } = useCompleteBooking()
+  const router = useRouter()
 
   // Load names from booking data depending on role
   useEffect(() => {
@@ -57,7 +67,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         // Try from both endpoints based on role to be safe
         if (user?.role === 'interviewer') {
           const bookings = await getInterviewerBookings();
-          const current = bookings.find(b => b.id === bookingId);
+          const current = bookings.find(booking => booking.id === bookingId);
           if (current && isActive) {
             setLocalName(user.name);
             // interviewer sees candidate name (userName)
@@ -82,11 +92,35 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     return () => { isActive = false; };
   }, [_roomId, user]);
 
-  const handleEndCall = () => {
-    completeSession({ bookingId: _roomId ?? '' })
+  const handleEndCall = async  () => {
+    const bookingId = _roomId ?? ''
+    if (!bookingId) return
+
+    if(user?.role==='user'){
+      setShowRating(true)
+      return
+    }
+
+    await completeSession({ bookingId })
+    // If interviewer, navigate to submit feedback page with bookingId
+    if (user?.role === 'interviewer' && bookingId) {
+      router.push(`/interviewer/feedback/${bookingId}?mode=create`)
+      return
+    }
     if (typeof window !== 'undefined') {
       window.history.back()
     }
+  }
+
+  const handleSubmitRating=async()=>{
+    const bookingId=_roomId??''
+    if(!bookingId) return
+      await submitRating({bookingId,rating,comment})
+      await completeSession({bookingId})
+      setShowRating(false)
+      if(typeof window !== 'undefined'){
+        window.history.back()
+      }
   }
 
   // Compiler state
@@ -136,6 +170,67 @@ console.log(fibonacci(10));`);
     <div className="h-screen w-full flex flex-col overflow-hidden" style={{
       background: 'linear-gradient(135deg, hsl(218, 23%, 8%), hsl(218, 23%, 8%), hsl(261, 60%, 18%))'
     }}>
+
+      {/* Rating Modal */}
+      {showRating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-0">
+          <div className="w-full max-w-md rounded-2xl bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-slate-100 p-8 border border-slate-700 shadow-2xl animate-in zoom-in-95">
+            
+            <div className="flex flex-col items-center text-center">
+              <h3 className="text-2xl font-bold mb-2">Rate Your Experience</h3>
+              <p className="text-sm text-slate-400 mb-6">Your feedback helps us improve.</p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map((starValue) => (
+                <button
+                  key={starValue}
+                  onClick={() => setRating(starValue)}
+                  onMouseEnter={() => setHoverRating(starValue)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className="group cursor-pointer"
+                  aria-label={`Rate ${starValue} star`}
+                >
+                  <Star 
+                    className={`h-8 w-8 transition-all duration-200 ease-in-out group-hover:scale-110 
+                      ${(hoverRating || rating) >= starValue 
+                        ? 'text-yellow-400 fill-yellow-400' 
+                        : 'text-slate-600'
+                      }`
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Tell us more about your experience"
+              className="w-full min-h-28 rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-200 placeholder:text-slate-500 mb-6
+                         focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#0D1117] transition-shadow"
+            />
+
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowRating(false)} disabled={ratingLoading} className="text-slate-300 hover:bg-slate-800 hover:text-white">
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitRating} disabled={ratingLoading || rating === 0} className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-slate-700 disabled:text-slate-400">
+                {ratingLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Submitting...
+                  </>
+                ) : 'Submit Feedback'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-2 left-2 z-10 space-y-1">
         <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-1">
           {/* <div className="flex items-center gap-1">
@@ -222,10 +317,7 @@ console.log(fibonacci(10));`);
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
                   <div className="flex items-center gap-2">
-                    <Button variant="control" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import
-                    </Button>
+                    
                     <Button variant="control" size="sm">
                       <Save className="h-4 w-4 mr-2" />
                       Save
@@ -399,10 +491,6 @@ console.log(fibonacci(10));`);
               onClick={handleCompilerToggle}
             >
               <Monitor className="h-5 w-5" />
-            </Button>
-
-            <Button variant="control" size="control">
-              <Settings className="h-5 w-5" />
             </Button>
 
             <Button

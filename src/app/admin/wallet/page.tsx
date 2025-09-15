@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ReusableTable, TableColumn } from '@/components/ui/ReusableTable';
 import { useAdminWallet } from '@/hooks/useAdminWallet';
 import { WalletTransaction } from '@/types/wallet.types';
+import Paginator from "../../../components/ui/paginator";
 import {
   Wallet as WalletIcon,
   TrendingUp,
@@ -37,6 +38,14 @@ const formatDateTime = (dateString: string) => {
   };
 };
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2
+  }).format(amount)
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -65,6 +74,8 @@ export default function Wallet() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateFilter, setDateFilter] = useState<string>('All');
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
 
   // Calculate totals
   const totalEarnings =transactions
@@ -84,18 +95,23 @@ export default function Wallet() {
     .filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth())
     .reduce((sum, t) => sum + (t.adminFee || 0), 0);
 
-  const filteredTransactions = transactions.filter(transaction => {
-    const userName = getUserName(transaction);
-    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.bookingId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' ||
-      (statusFilter === 'Credit' && transaction.type === 'credit') ||
-      (statusFilter === 'Debit' && transaction.type === 'debit');
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(transaction => {
+      const userName = getUserName(transaction);
+      const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.bookingId?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'All' ||
+        (statusFilter === 'Credit' && transaction.type === 'credit') ||
+        (statusFilter === 'Debit' && transaction.type === 'debit');
+      return matchesSearch && matchesStatus;
+    });
+  }, [transactions, searchTerm, statusFilter]);
 
-
-    return matchesSearch && matchesStatus;
-  });
+  const pagedTransactions = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, page]);
 
   const getStatusColor = (status: string) => {
     return status === 'Credit'
@@ -158,7 +174,7 @@ export default function Wallet() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, duration: 0.5 }}
               >
-                ₹{totalEarnings.toLocaleString('en-IN')}
+                {loading ? "—" : formatCurrency(summary.balance)}
               </motion.p>
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <span className="text-sm text-gray-300">Total Amount: <span className="font-semibold text-white">₹{totalAmount.toLocaleString('en-IN')}</span></span>
@@ -266,7 +282,7 @@ export default function Wallet() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold text-white">Transaction History</h2>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-400">Total: {filteredTransactions.length} transactions</span>
+            <span className="text-gray-500">• Page {page} of {Math.max(1, Math.ceil(filteredTransactions.length / pageSize))}</span>
               <motion.button
                 className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.1 }}
@@ -289,7 +305,7 @@ export default function Wallet() {
         ) : (() => {
           const INR = (v: number) => `₹${v.toLocaleString('en-IN')}`;
           type Row = typeof filteredTransactions[0] & { seq: number };
-          const tableData: Row[] = filteredTransactions.map((t, i) => ({ ...t, seq: i + 1 }));
+          const tableData: Row[] = pagedTransactions.map((t, i) => ({ ...t, seq: ((page - 1) * pageSize) + i + 1 }));
 
           const columns: TableColumn<Row>[] = [
             {
@@ -366,7 +382,17 @@ export default function Wallet() {
           );
         })()}
       </motion.div>
-
+        {/* Pagination */}
+        {!loading && transactions.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <Paginator
+                page={page}
+                totalItems={transactions.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
 
     </motion.div>
   );

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { ReusableTable, TableColumn } from '../../../components/ui/ReusableTable';
+import Paginator from '../../../components/ui/paginator';
 import { useAdminUsers } from '../../../hooks/useAdminUsers';
 import { blockUser, unblockUser } from '../../../services/adminService';
 import { toast } from 'sonner';
@@ -47,6 +48,8 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
 
   useEffect(() => {
     if (users.length > 0) {
@@ -55,17 +58,29 @@ export default function UserManagement() {
   }, [users]);
 
   // Filter out Admins from the user list
-  const filteredUsers = localUsers
-    .filter(user => user.role !== 'Admin' && user.role !== 'admin')
-    .filter(user => {
-      const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsers = useMemo(() => {
+    const list = localUsers
+      .filter(user => user.role !== 'Admin' && user.role !== 'admin')
+      .filter(user => {
+        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const userRoleForFilter = user.role === 'user' ? 'Candidate' : user.role;
-      const matchesRole = roleFilter === 'All' || userRoleForFilter === roleFilter;
-      const matchesStatus = statusFilter === 'All' || user.isBlocked === (statusFilter === 'Blocked');
-      return matchesSearch && matchesRole && matchesStatus;
-    });
+        const userRoleForFilter = user.role === 'user' ? 'Candidate' : user.role;
+        const matchesRole = roleFilter === 'All' || userRoleForFilter === roleFilter;
+        const matchesStatus = statusFilter === 'All' || user.isBlocked === (statusFilter === 'Blocked');
+        return matchesSearch && matchesRole && matchesStatus;
+      });
+    // reset to page 1 when filters/search change
+    setPage(1);
+    return list;
+  }, [localUsers, searchTerm, roleFilter, statusFilter]);
+
+  // current page slice
+  const totalItems = filteredUsers.length;
+  const pagedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
 
   const handleToggleStatus = async (userId: string) => {
     setActionLoading(userId);
@@ -273,11 +288,19 @@ export default function UserManagement() {
       {/* Users Table */}
       <motion.div variants={itemVariants}>
         <ReusableTable
-          data={filteredUsers}
+          data={pagedUsers}
           columns={columns}
           title="Users"
           onRowClick={handleRowClick}
         />
+        <div className="mt-4 flex justify-center">
+          <Paginator
+            page={page}
+            totalItems={totalItems}
+            onPageChange={setPage}
+            pageSize={pageSize}
+          />
+        </div>
       </motion.div>
     </motion.div>
   );

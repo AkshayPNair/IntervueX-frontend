@@ -1,6 +1,6 @@
 "use client"
 
-import { useState} from "react"
+import { useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -11,8 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FloatingMascot } from "@/components/ui/floating-mascot"
 import { useUserBookings } from "@/hooks/useUserBookings"
 import { useCancelBooking } from "@/hooks/useCancelBooking"
+import { useInterviewerRatingByBookingId } from "@/hooks/useInterviewerRatingByBookingId"
 import { BookingStatus, Booking } from "@/types/booking.types"
 import { Textarea } from "@/components/ui/textarea"
+import Paginator from "../../../components/ui/paginator";
 import { toast } from "sonner"
 import {
   Play,
@@ -37,16 +39,31 @@ const getExperienceLevel = (years?: number): string => {
   return "Junior"
 }
 
+const BookingRatingStars=({ bookingId }: { bookingId: string })=> {
+  const { data } = useInterviewerRatingByBookingId(bookingId)
+  const rating = data?.rating ?? 0
+  return (
+    <div className="flex items-center space-x-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`w-4 h-4 ${star <= rating ? 'fill-[#3FB950] text-[#3FB950]' : 'text-[#30363D]'}`}
+        />
+      ))}
+    </div>
+  )
+}
+
 const formatDateTime = (date: string, startTime: string): string => {
   const sessionDate = new Date(date)
   const today = new Date()
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-const sessionDateOnly = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
+  const sessionDateOnly = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
   const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate())
-  
+
   if (sessionDateOnly.getTime() === todayOnly.getTime()) {
     return `Today, ${startTime}`
   } else if (sessionDateOnly.getTime() === tomorrowOnly.getTime()) {
@@ -72,26 +89,49 @@ const canCancelBooking = (date: string, startTime: string): boolean => {
 export default function SessionsPage() {
   const router = useRouter()
   const [sessionsTab, setSessionsTab] = useState("upcoming")
-  const {bookings,loading,error,refetch}=useUserBookings()
-  const {cancelSession, loading: cancelLoading} = useCancelBooking()
+  const { bookings, loading, error, refetch } = useUserBookings()
+  const { cancelSession, loading: cancelLoading } = useCancelBooking()
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelError, setCancelError] = useState('')
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [selectedCancelledBooking, setSelectedCancelledBooking] = useState<Booking | null>(null)
-
-  const upcomingBookings = bookings.filter(booking => 
-    booking.status === BookingStatus.CONFIRMED || booking.status === BookingStatus.PENDING
-  )
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null)
+  const { data: reviewData, loading: reviewLoading, error: reviewError } = useInterviewerRatingByBookingId(selectedBookingForReview?.id ?? null)
   
-  const completedBookings = bookings.filter(booking => 
+  const pageSize = 6
+  const [pageUpcoming, setPageUpcoming] = useState(1)
+  const [pageCompleted, setPageCompleted] = useState(1)
+  const [pageCancelled, setPageCancelled] = useState(1)
+
+  const upcomingBookings = useMemo(() => bookings.filter(booking =>
+    booking.status === BookingStatus.CONFIRMED || booking.status === BookingStatus.PENDING
+  ), [bookings])
+
+  const completedBookings = useMemo(() => bookings.filter(booking =>
     booking.status === BookingStatus.COMPLETED
+  ), [bookings])
+
+  const cancelledBookings = bookings.filter(booking =>
+    booking.status === BookingStatus.CANCELLED
   )
 
-  const cancelledBookings = bookings.filter(booking => 
-    booking.status === BookingStatus.CANCELLED
-   )
+  const pagedUpcoming = useMemo(() => {
+    const start = (pageUpcoming - 1) * pageSize
+    return upcomingBookings.slice(start, start + pageSize)
+  }, [upcomingBookings, pageUpcoming])
+
+  const pagedCompleted = useMemo(() => {
+    const start = (pageCompleted - 1) * pageSize
+    return completedBookings.slice(start, start + pageSize)
+  }, [completedBookings, pageCompleted])
+
+  const pagedCancelled = useMemo(() => {
+    const start = (pageCancelled - 1) * pageSize
+    return cancelledBookings.slice(start, start + pageSize)
+  }, [cancelledBookings, pageCancelled])
 
   const handleCancelClick = (booking: Booking) => {
     setSelectedBooking(booking)
@@ -100,9 +140,19 @@ export default function SessionsPage() {
     setCancelError('')
   }
 
+  const handleReviewClick = (booking: Booking) => {
+    setSelectedBookingForReview(booking)
+    setReviewModalOpen(true)
+  }
+
+  const handleReviewModalClose = () => {
+    setReviewModalOpen(false);
+    setSelectedBookingForReview(null);
+  }
+
   const handleCancelConfirm = async () => {
     if (!selectedBooking) return
-    
+
     if (!cancelReason.trim()) {
       setCancelError('Please provide a reason for cancellation')
       return
@@ -111,15 +161,15 @@ export default function SessionsPage() {
       setCancelError('Please provide a more detailed reason (at least 10 characters)')
       return
     }
-    
+
     setCancelError('')
-    
+
     try {
       await cancelSession({
         bookingId: selectedBooking.id,
         reason: cancelReason.trim()
       })
-      
+
       toast.success('Session cancelled successfully')
       setCancelModalOpen(false)
       setSelectedBooking(null)
@@ -147,7 +197,7 @@ export default function SessionsPage() {
   const handleDetailsModalClose = () => {
     setDetailsModalOpen(false)
     setSelectedCancelledBooking(null)
-   }
+  }
 
   const commonReasons = [
     "Personal emergency or urgent matter",
@@ -158,7 +208,7 @@ export default function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
-      
+
       <div className="min-h-screen pt-16 bg-gradient-to-br from-[#0D1117] to-[#161B22]">
         {/* Sessions Header */}
         <div className="bg-[#161B22]/80 backdrop-blur-xl border-b border-[#30363D]/50 sticky top-16 z-30">
@@ -168,7 +218,7 @@ export default function SessionsPage() {
                 <h1 className="text-4xl font-bold text-[#E6EDF3] mb-2">Interview Sessions</h1>
                 <p className="text-[#7D8590] text-lg">Manage your interview sessions</p>
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -184,41 +234,38 @@ export default function SessionsPage() {
             <div className="flex justify-center mb-8">
               <div className="flex bg-[#0D1117]/80 rounded-xl p-1 backdrop-blur-sm border border-[#30363D]">
                 <motion.button
-                  onClick={() => setSessionsTab("upcoming")}
-                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${
-                    sessionsTab === "upcoming"
-                      ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
-                      : "text-[#7D8590] hover:text-[#E6EDF3]"
-                  }`}
+                  onClick={() => { setSessionsTab("upcoming"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
+                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${sessionsTab === "upcoming"
+                    ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
+                    : "text-[#7D8590] hover:text-[#E6EDF3]"
+                    }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   Upcoming
                 </motion.button>
                 <motion.button
-                  onClick={() => setSessionsTab("completed")}
-                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${
-                    sessionsTab === "completed"
-                      ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
-                      : "text-[#7D8590] hover:text-[#E6EDF3]"
-                  }`}
+                  onClick={() => { setSessionsTab("completed"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
+                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${sessionsTab === "completed"
+                    ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
+                    : "text-[#7D8590] hover:text-[#E6EDF3]"
+                    }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   Completed
                 </motion.button>
                 <motion.button
-                  onClick={() => setSessionsTab("cancelled")}
-                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${
-                    sessionsTab === "cancelled"
-                      ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
-                      : "text-[#7D8590] hover:text-[#E6EDF3]"
-                  }`}
+                  onClick={() => { setSessionsTab("cancelled"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
+                  className={`px-6 py-3 rounded-lg transition-all duration-300 font-medium ${sessionsTab === "cancelled"
+                    ? "bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] text-white shadow-lg"
+                    : "text-[#7D8590] hover:text-[#E6EDF3]"
+                    }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   Cancelled
-                 </motion.button>
+                </motion.button>
               </div>
             </div>
 
@@ -232,303 +279,338 @@ export default function SessionsPage() {
                 transition={{ duration: 0.3 }}
               >
                 {sessionsTab === "upcoming" ? (
-                  <div className="space-y-4">
-                    {loading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
-                        <p className="text-[#7D8590] mt-2">Loading sessions...</p>
-                      </div>
-                    ) : error ? (
-                      <div className="text-center py-12">
-                        <div className="text-red-500 mb-4">Error: {error}</div>
-                        <Button
-                          onClick={() => window.location.reload()}
-                          variant="outline"
-                          className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
-                        >
-                          Retry
-                        </Button>
-                      </div>
-                    ) : upcomingBookings.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Calendar className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Upcoming Sessions</h3>
-                        <p className="text-[#7D8590] mb-6">You don't have any scheduled interview sessions yet.</p>
-                      </div>
-                    ) : (
-                      upcomingBookings.map((booking, index) => (
-                        <motion.div
-                          key={booking.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: index * 0.1 }}
-                        >
-                          <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <Avatar className="w-16 h-16">
-                                    {booking.interviewerProfilePicture ? (
-                                      <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
-                                    ) : null}
-                                    <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold text-lg">
-                                      {getInitials(booking.interviewerName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h3 className="text-[#E6EDF3] font-bold text-xl">{booking.interviewerName}</h3>
-                                    <div className="flex items-center space-x-3 text-sm mb-2">
-                                      <span className="text-[#BC8CFF] font-medium">{booking.interviewerJobTitle || 'Software Engineer'}</span>
-                                      <Badge variant="outline" className="border-[#58A6FF] text-[#58A6FF]">
-                                        {getExperienceLevel(booking.interviewerExperience)}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        {formatDateTime(booking.date, booking.startTime)}
-                                      </span>
-                                      <span className="flex items-center">
-                                        <User className="w-4 h-4 mr-1" />
-                                        Mock Interview
-                                      </span>
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        60 min
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                
-                                <Button asChild
-                                  className="bg-gradient-to-r from-[#3FB950] to-[#2EA043] hover:from-[#3FB950]/80 hover:to-[#2EA043]/80 px-6"
-                                >
-                                <Link href={`/user/sessions/${booking.id}`}>
-                                  <Video className="w-4 h-4 mr-2" />
-                                  Join Meeting
-                                </Link>
-                                </Button>
-                                <Button
-                                  onClick={() => handleDetailsClick(booking)}
-                                  variant="outline"
-                                  className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
-                                >
-                                  <MessageSquare className="w-4 h-4 mr-2" />
-                                  Details
-                                </Button>
-                                {canCancelBooking(booking.date, booking.startTime) && (
-                                  <Button
-                                    onClick={() => handleCancelClick(booking)}
-                                    variant="outline"
-                                    className="border-red-500/50 text-red-500 hover:bg-red-500/10 hover:border-red-500 bg-transparent"
-                                  >
-                                    <X className="w-4 h-4 mr-2" />
-                                    Cancel
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))
-                    )}
-                  </div>
-                ) : sessionsTab === "completed" ? (
-                  <div className="space-y-4">
-                  {loading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
-                        <p className="text-[#7D8590] mt-2">Loading sessions...</p>
-                      </div>
-                    ) : error ? (
-                      <div className="text-center py-12">
-                        <div className="text-red-500 mb-4">Error: {error}</div>
-                        <Button
-                          onClick={() => window.location.reload()}
-                          variant="outline"
-                          className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
-                        >
-                          Retry
-                        </Button>
-                      </div>
-                    ) : completedBookings.length === 0 ? (
-                      <div className="text-center py-12">
-                        <MessageSquare className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Completed Sessions</h3>
-                        <p className="text-[#7D8590] mb-6">You haven't completed any interview sessions yet.</p>
-                      </div>
-                    ) : (
-                      completedBookings.map((booking, index) => (
-                        <motion.div
-                          key={booking.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: index * 0.1 }}
-                        >
-                          <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <Avatar className="w-16 h-16">
-                                    {booking.interviewerProfilePicture ? (
-                                      <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
-                                    ) : null}
-                                    <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold text-lg">
-                                      {getInitials(booking.interviewerName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h3 className="text-[#E6EDF3] font-bold text-xl">{booking.interviewerName}</h3>
-                                    <div className="flex items-center space-x-3 text-sm mb-2">
-                                      <span className="text-[#BC8CFF] font-medium">{booking.interviewerJobTitle || 'Software Engineer'}</span>
-                                      <Badge variant="outline" className="border-[#58A6FF] text-[#58A6FF]">
-                                        {getExperienceLevel(booking.interviewerExperience)}
-                                      </Badge>
-                                      <div className="flex items-center space-x-1">
-                                        {[1, 2, 3, 4, 5].map((star) => (
-                                          <Star
-                                            key={star}
-                                            className={`w-4 h-4 ${
-                                              star <= 4 ? "fill-[#3FB950] text-[#3FB950]" : "text-[#30363D]"
-                                            }`}
-                                          />
-                                        ))}
+                  <>
+                    <div className="space-y-4">
+                      {loading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
+                          <p className="text-[#7D8590] mt-2">Loading sessions...</p>
+                        </div>
+                      ) : error ? (
+                        <div className="text-center py-12">
+                          <div className="text-red-500 mb-4">Error: {error}</div>
+                          <Button
+                            onClick={() => window.location.reload()}
+                            variant="outline"
+                            className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      ) : upcomingBookings.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Calendar className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
+                          <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Upcoming Sessions</h3>
+                          <p className="text-[#7D8590] mb-6">You don't have any scheduled interview sessions yet.</p>
+                        </div>
+                      ) : (
+                        pagedUpcoming.map((booking, index) => (
+                          <motion.div
+                            key={booking.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                          >
+                            <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    <Avatar className="w-16 h-16">
+                                      {booking.interviewerProfilePicture ? (
+                                        <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
+                                      ) : null}
+                                      <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold text-lg">
+                                        {getInitials(booking.interviewerName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h3 className="text-[#E6EDF3] font-bold text-xl">{booking.interviewerName}</h3>
+                                      <div className="flex items-center space-x-3 text-sm mb-2">
+                                        <span className="text-[#BC8CFF] font-medium">{booking.interviewerJobTitle || 'Software Engineer'}</span>
+                                        <Badge variant="outline" className="border-[#58A6FF] text-[#58A6FF]">
+                                          {getExperienceLevel(booking.interviewerExperience)}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          {formatDateTime(booking.date, booking.startTime)}
+                                        </span>
+                                        <span className="flex items-center">
+                                          <User className="w-4 h-4 mr-1" />
+                                          Mock Interview
+                                        </span>
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          60 min
+                                        </span>
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        {formatDateTime(booking.date, booking.startTime)}
-                                      </span>
-                                      <span className="flex items-center">
-                                        <User className="w-4 h-4 mr-1" />
-                                        Mock Interview
-                                      </span>
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        60 min
-                                      </span>
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+
+                                    <Button asChild
+                                      className="bg-gradient-to-r from-[#3FB950] to-[#2EA043] hover:from-[#3FB950]/80 hover:to-[#2EA043]/80 px-6"
+                                    >
+                                      <Link href={`/user/sessions/${booking.id}`}>
+                                        <Video className="w-4 h-4 mr-2" />
+                                        Join Meeting
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleDetailsClick(booking)}
+                                      variant="outline"
+                                      className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
+                                    >
+                                      <MessageSquare className="w-4 h-4 mr-2" />
+                                      Details
+                                    </Button>
+                                    {canCancelBooking(booking.date, booking.startTime) && (
+                                      <Button
+                                        onClick={() => handleCancelClick(booking)}
+                                        variant="outline"
+                                        className="border-red-500/50 text-red-500 hover:bg-red-500/10 hover:border-red-500 bg-transparent"
+                                      >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Cancel
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center space-x-3">   
-                                <Button
-                                  onClick={() => router.push("/user/feedback")}
-                                  className="bg-gradient-to-r from-[#58A6FF] to-[#0969DA] hover:from-[#58A6FF]/80 hover:to-[#0969DA]/80 px-6"
-                                >
-                                  <MessageSquare className="w-4 h-4 mr-2" />
-                                  View Feedback
-                                </Button>
-                                <Button
-                                  onClick={() => handleDetailsClick(booking)}
-                                  variant="outline"
-                                  className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
-                                >
-                                  <MessageSquare className="w-4 h-4 mr-2" />
-                                  Details
-                                </Button>
-                              </div>
-                            </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                    {/* Pagination - Upcoming */}
+                    {!loading && upcomingBookings.length > 0 && (
+                      <div className="mt-6 flex justify-center">
+                        <Paginator
+                          page={pageUpcoming}
+                          totalItems={upcomingBookings.length}
+                          pageSize={pageSize}
+                          onPageChange={(p) => { setPageUpcoming(p); setPageCompleted(1); setPageCancelled(1); }}
+                        />
+                      </div>
                     )}
-                  </div>
-                  ) : sessionsTab === "cancelled" ? (
-                  <div className="space-y-4">
-                    {loading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
-                        <p className="text-[#7D8590] mt-2">Loading sessions...</p>
-                      </div>
-                    ) : error ? (
-                      <div className="text-center py-12">
-                        <div className="text-red-500 mb-4">Error: {error}</div>
-                        <Button
-                          onClick={() => window.location.reload()}
-                          variant="outline"
-                          className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
-                        >
-                          Retry
-                        </Button>
-                      </div>
-                    ) : cancelledBookings.length === 0 ? (
-                      <div className="text-center py-12">
-                        <X className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Cancelled Sessions</h3>
-                        <p className="text-[#7D8590] mb-6">You haven't cancelled any interview sessions.</p>
-                      </div>
-                    ) : (
-                      cancelledBookings.map((booking, index) => (
-                        <motion.div
-                          key={booking.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: index * 0.1 }}
-                        >
-                          <Card className="bg-[#161B22]/80 backdrop-blur-md border-red-500/20 hover:border-red-500/40 transition-all duration-300">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <Avatar className="w-16 h-16 opacity-60">
-                                    {booking.interviewerProfilePicture ? (
-                                      <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
-                                    ) : null}
-                                    <AvatarFallback className="bg-gradient-to-br from-red-500/50 to-red-700/50 text-white font-bold text-lg">
-                                      {getInitials(booking.interviewerName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h3 className="text-[#E6EDF3] font-bold text-xl opacity-80">{booking.interviewerName}</h3>
-                                    <div className="flex items-center space-x-3 text-sm mb-2">
-                                      <span className="text-[#BC8CFF] font-medium opacity-70">{booking.interviewerJobTitle || 'Software Engineer'}</span>
-                                      <Badge variant="outline" className="border-red-500/50 text-red-500/70">
-                                        Cancelled
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        {formatDateTime(booking.date, booking.startTime)}
-                                      </span>
-                                      <span className="flex items-center">
-                                        <User className="w-4 h-4 mr-1" />
-                                        Mock Interview
-                                      </span>
-                                      <span className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-1" />
-                                        60 min
-                                      </span>
+                  </>
+                ) : sessionsTab === "completed" ? (
+                  <>
+                    <div className="space-y-4">
+                      {loading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
+                          <p className="text-[#7D8590] mt-2">Loading sessions...</p>
+                        </div>
+                      ) : error ? (
+                        <div className="text-center py-12">
+                          <div className="text-red-500 mb-4">Error: {error}</div>
+                          <Button
+                            onClick={() => window.location.reload()}
+                            variant="outline"
+                            className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      ) : completedBookings.length === 0 ? (
+                        <div className="text-center py-12">
+                          <MessageSquare className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
+                          <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Completed Sessions</h3>
+                          <p className="text-[#7D8590] mb-6">You haven't completed any interview sessions yet.</p>
+                        </div>
+                      ) : (
+                        pagedCompleted.map((booking, index) => (
+                          <motion.div
+                            key={booking.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                          >
+                            <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    <Avatar className="w-16 h-16">
+                                      {booking.interviewerProfilePicture ? (
+                                        <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
+                                      ) : null}
+                                      <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold text-lg">
+                                        {getInitials(booking.interviewerName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h3 className="text-[#E6EDF3] font-bold text-xl">{booking.interviewerName}</h3>
+                                      <div className="flex items-center space-x-3 text-sm mb-2">
+                                        <span className="text-[#BC8CFF] font-medium">{booking.interviewerJobTitle || 'Software Engineer'}</span>
+                                        <Badge variant="outline" className="border-[#58A6FF] text-[#58A6FF]">
+                                          {getExperienceLevel(booking.interviewerExperience)}
+                                        </Badge>
+                                        <BookingRatingStars bookingId={booking.id} />
+                                      </div>
+                                      <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          {formatDateTime(booking.date, booking.startTime)}
+                                        </span>
+                                        <span className="flex items-center">
+                                          <User className="w-4 h-4 mr-1" />
+                                          Mock Interview
+                                        </span>
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          60 min
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
+                                  <div className="flex items-center space-x-3">
+                                    <Button
+                                      onClick={() => router.push(`/user/feedback`)}
+                                      className="bg-gradient-to-r from-[#58A6FF] to-[#0969DA] hover:from-[#58A6FF]/80 hover:to-[#0969DA]/80 px-6"
+                                    >
+                                      <MessageSquare className="w-4 h-4 mr-2" />
+                                      View Feedback
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleDetailsClick(booking)}
+                                      variant="outline"
+                                      className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
+                                    >
+                                      <MessageSquare className="w-4 h-4 mr-2" />
+                                      Details
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
+                                      onClick={() => handleReviewClick(booking)}
+                                    >
+                                      Review
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center space-x-3">
-                                  <Button
-                                    onClick={() => handleDetailsClick(booking)}
-                                    variant="outline"
-                                    className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
-                                  >
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    Details
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                    {!loading && completedBookings.length > 0 && (
+                      <div className="mt-6 flex justify-center">
+                        <Paginator
+                          page={pageCompleted}
+                          totalItems={completedBookings.length}
+                          pageSize={pageSize}
+                          onPageChange={(p) => { setPageCompleted(p); setPageUpcoming(1); setPageCancelled(1); }}
+                        />
+                      </div>
                     )}
-                  </div>
-               ):null}
+                  </>
+                ) : sessionsTab === "cancelled" ? (
+                  <>
+                    <div className="space-y-4">
+                      {loading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BC8CFF] mx-auto"></div>
+                          <p className="text-[#7D8590] mt-2">Loading sessions...</p>
+                        </div>
+                      ) : error ? (
+                        <div className="text-center py-12">
+                          <div className="text-red-500 mb-4">Error: {error}</div>
+                          <Button
+                            onClick={() => window.location.reload()}
+                            variant="outline"
+                            className="border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      ) : cancelledBookings.length === 0 ? (
+                        <div className="text-center py-12">
+                          <X className="w-16 h-16 text-[#7D8590] mx-auto mb-4" />
+                          <h3 className="text-xl font-semibold text-[#E6EDF3] mb-2">No Cancelled Sessions</h3>
+                          <p className="text-[#7D8590] mb-6">You haven't cancelled any interview sessions.</p>
+                        </div>
+                      ) : (
+                        pagedCancelled.map((booking, index) => (
+                          <motion.div
+                            key={booking.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                          >
+                            <Card className="bg-[#161B22]/80 backdrop-blur-md border-red-500/20 hover:border-red-500/40 transition-all duration-300">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    <Avatar className="w-16 h-16 opacity-60">
+                                      {booking.interviewerProfilePicture ? (
+                                        <AvatarImage src={booking.interviewerProfilePicture} alt={booking.interviewerName} />
+                                      ) : null}
+                                      <AvatarFallback className="bg-gradient-to-br from-red-500/50 to-red-700/50 text-white font-bold text-lg">
+                                        {getInitials(booking.interviewerName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h3 className="text-[#E6EDF3] font-bold text-xl opacity-80">{booking.interviewerName}</h3>
+                                      <div className="flex items-center space-x-3 text-sm mb-2">
+                                        <span className="text-[#BC8CFF] font-medium opacity-70">{booking.interviewerJobTitle || 'Software Engineer'}</span>
+                                        <Badge variant="outline" className="border-red-500/50 text-red-500/70">
+                                          Cancelled
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center space-x-4 text-sm text-[#7D8590]">
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          {formatDateTime(booking.date, booking.startTime)}
+                                        </span>
+                                        <span className="flex items-center">
+                                          <User className="w-4 h-4 mr-1" />
+                                          Mock Interview
+                                        </span>
+                                        <span className="flex items-center">
+                                          <Clock className="w-4 h-4 mr-1" />
+                                          60 min
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+                                    <Button
+                                      onClick={() => handleDetailsClick(booking)}
+                                      variant="outline"
+                                      className="border-[#BC8CFF]/50 text-[#BC8CFF] hover:bg-[#BC8CFF]/10 hover:border-[#BC8CFF] bg-transparent"
+                                    >
+                                      <MessageSquare className="w-4 h-4 mr-2" />
+                                      Details
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                    {!loading && cancelledBookings.length > 0 && (
+                      <div className="mt-6 flex justify-center">
+                        <Paginator
+                          page={pageCancelled}
+                          totalItems={cancelledBookings.length}
+                          pageSize={pageSize}
+                          onPageChange={(p) => { setPageCancelled(p); setPageUpcoming(1); setPageCompleted(1); }}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : null}
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
       </div>
-      
+
       <FloatingMascot />
 
       {/* Cancel Session Modal */}
@@ -675,7 +757,7 @@ export default function SessionsPage() {
               <div className="p-6 border-b border-[#30363D]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                   
+
                     <div>
                       <h2 className="text-2xl font-bold text-[#E6EDF3]">Session Details</h2>
                       <p className="text-[#7D8590]">
@@ -725,7 +807,7 @@ export default function SessionsPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                    {selectedCancelledBooking.status === BookingStatus.CANCELLED && (
+                      {selectedCancelledBooking.status === BookingStatus.CANCELLED && (
                         <Badge variant="outline" className="border-red-500/50 text-red-500">Cancelled</Badge>
                       )}
                       {selectedCancelledBooking.status === BookingStatus.COMPLETED && (
@@ -753,7 +835,7 @@ export default function SessionsPage() {
                 </div>
 
                 {/* Cancellation Reason (only when status is CANCELLED) */}
-                {selectedCancelledBooking.status ===  BookingStatus.CANCELLED && (
+                {selectedCancelledBooking.status === BookingStatus.CANCELLED && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
                     <div className="flex items-start space-x-4">
                       <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500/20 flex-shrink-0">
@@ -776,6 +858,96 @@ export default function SessionsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+      {reviewModalOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={handleReviewModalClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 50 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="bg-[#0D1117] border border-[#30363D] rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-[#30363D]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#E6EDF3]">Session Review</h2>
+                    <p className="text-[#7D8590]">
+                      Review for {selectedBookingForReview?.interviewerName || 'Interviewer'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleReviewModalClose}
+                  variant="outline"
+                  size="sm"
+                  className="border-[#30363D] text-[#7D8590] hover:bg-[#30363D] hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {reviewLoading ? (
+                <div className="bg-[#161B22]/80 border border-[#30363D] rounded-xl p-6 text-center">
+                  <p className="text-[#7D8590]">Loading review details...</p>
+                </div>
+              ) : reviewError ? (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+                  <p className="text-red-300">{reviewError}</p>
+                </div>
+              ) : reviewData ? (
+                <>
+                  {/* Rating Section */}
+                  <div className="bg-[#161B22]/80 border border-[#30363D] rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-[#E6EDF3] mb-4">Rating</h3>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <Star
+                            key={s}
+                            className={`w-6 h-6 ${s <= (reviewData?.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-[#30363D]'}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="ml-2 text-xl font-medium text-[#E6EDF3]">{reviewData.rating}/5</span>
+                    </div>
+                  </div>
+
+                  {/* Comment Section */}
+                  <div className="bg-[#161B22]/80 border border-[#30363D] rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-[#E6EDF3] mb-4">Comment</h3>
+                    {reviewData.comment ? (
+                      <div className="bg-[#0D1117] border border-[#30363D] rounded-lg p-4 text-sm text-[#E6EDF3] leading-relaxed whitespace-pre-wrap">
+                        {reviewData.comment}
+                      </div>
+                    ) : (
+                      <p className="text-[#7D8590]">No detailed comment was provided for this session.</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="bg-[#161B22]/80 border border-[#30363D] rounded-xl p-6 text-center">
+                  <p className="text-[#7D8590]">No review found for this booking.</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </div>
   )
 }

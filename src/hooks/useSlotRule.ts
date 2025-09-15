@@ -1,7 +1,7 @@
-import { useState,useEffect,useCallback } from "react";
-import {toast} from 'sonner'
-import { saveSlotRule,getSlotRule } from "../services/slotRuleService";
-import { DaySlotRule,SaveSlotRuleData,SlotRuleResponse } from "../types/slotRule.types";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from 'sonner'
+import { saveSlotRule, getSlotRule } from "../services/slotRuleService";
+import { DaySlotRule, SaveSlotRuleData, SlotRuleResponse, ExcludedTimeSlot } from "../types/slotRule.types";
 
 const getDefaultSlotRules = (): DaySlotRule[] => [
   { day: 'Sun', startTime: '', endTime: '', bufferTime: 15, enabled: false },
@@ -16,6 +16,7 @@ const getDefaultSlotRules = (): DaySlotRule[] => [
 export const useSlotRule = () => {
   const [slotRules, setSlotRules] = useState<DaySlotRule[]>(getDefaultSlotRules());
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [excludedSlotsByDate, setExcludedSlotsByDate] = useState<Record<string, ExcludedTimeSlot[]>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [slotRuleId, setSlotRuleId] = useState<string>('');
@@ -32,6 +33,7 @@ export const useSlotRule = () => {
       if (response) {
         setSlotRules(response.slotRules);
         setBlockedDates(response.blockedDates);
+        setExcludedSlotsByDate(response.excludedSlotsByDate || {});
         setSlotRuleId(response.id);
       }
     } catch (error: any) {
@@ -44,7 +46,7 @@ export const useSlotRule = () => {
 
   const saveSlotRules = useCallback(async () => {
     // Validate active days
-    const activeDays = slotRules.filter(rule => 
+    const activeDays = slotRules.filter(rule =>
       rule.enabled && rule.startTime && rule.endTime
     );
 
@@ -79,12 +81,28 @@ export const useSlotRule = () => {
           description: 'Please use YYYY-MM-DD format'
         });
         return false;
+
+      }
+    }
+
+    // Validate excludedSlotsByDate
+    for (const [date, slots] of Object.entries(excludedSlotsByDate)) {
+      if (!isValidDateFormat(date)) {
+        toast.error(`Invalid date ${date} in exclusions`);
+        return false;
+      }
+      for (const s of slots) {
+        if (!isValidTimeRange(s.startTime, s.endTime)) {
+          toast.error(`Invalid time range ${s.startTime}-${s.endTime} on ${date}`);
+          return false;
+        }
+
       }
     }
 
     setSaving(true);
     try {
-        const normalizedSlotRules = slotRules.map(rule => {
+      const normalizedSlotRules = slotRules.map(rule => {
         if (rule.enabled) return rule;
         return {
           ...rule,
@@ -96,22 +114,23 @@ export const useSlotRule = () => {
       });
 
       const saveData: SaveSlotRuleData = {
-        slotRules:normalizedSlotRules,
-        blockedDates
+        slotRules: normalizedSlotRules,
+        blockedDates,
+        excludedSlotsByDate
       };
 
       // This single API call handles both create and update
       const response = await saveSlotRule(saveData);
       setSlotRuleId(response.id);
-      
+
       const isFirstTime = !slotRuleId;
       toast.success(
-        isFirstTime ? 'Slot rules created successfully!' : 'Slot rules updated successfully!', 
+        isFirstTime ? 'Slot rules created successfully!' : 'Slot rules updated successfully!',
         {
-          description: `Configured ${activeDays.length} day(s) and ${blockedDates.length} blocked date(s).`
+           description: `Configured ${activeDays.length} day(s), ${blockedDates.length} blocked date(s) and exclusions on ${Object.keys(excludedSlotsByDate).length} date(s).`
         }
       );
-      
+
       return true;
     } catch (error: any) {
       toast.error('Failed to save slot rules', {
@@ -121,7 +140,7 @@ export const useSlotRule = () => {
     } finally {
       setSaving(false);
     }
-  }, [slotRules, blockedDates, slotRuleId]);
+  }, [slotRules, blockedDates, excludedSlotsByDate, slotRuleId]);
 
   const updateSlotRule = useCallback((dayIndex: number, field: keyof DaySlotRule, value: string | number | boolean) => {
     setSlotRules(prev => prev.map((rule, index) =>
@@ -165,9 +184,40 @@ export const useSlotRule = () => {
     toast.info('Date unblocked');
   }, []);
 
+  // Exclusions management
+  const addExcludedSlot = useCallback((date: string, slot: ExcludedTimeSlot) => {
+    if (!isValidDateFormat(date)) {
+      toast.error('Invalid date format');
+      return false;
+    }
+    if (!isValidTimeRange(slot.startTime, slot.endTime)) {
+      toast.error('Invalid time range');
+      return false;
+    }
+    setExcludedSlotsByDate(prev => {
+      const list = prev[date] || [];
+      // de-duplicate by exact match
+      if (list.some(s => s.startTime === slot.startTime && s.endTime === slot.endTime)) return prev;
+      return { ...prev, [date]: [...list, slot] };
+    });
+    toast.success('Slot excluded');
+    return true;
+  }, []);
+
+  const removeExcludedSlot = useCallback((date: string, slot: ExcludedTimeSlot) => {
+    setExcludedSlotsByDate(prev => {
+      const list = prev[date] || [];
+      const next = list.filter(s => !(s.startTime === slot.startTime && s.endTime === slot.endTime));
+      const { [date]: _, ...rest } = prev;
+      return next.length ? { ...prev, [date]: next } : rest;
+    });
+    toast.info('Excluded slot removed');
+  }, []);
+
   const resetSlotRules = useCallback(() => {
     setSlotRules(getDefaultSlotRules());
     setBlockedDates([]);
+    setExcludedSlotsByDate({});
     setSlotRuleId('');
     toast.info('Slot rules reset', {
       description: 'All configurations have been cleared.'
@@ -191,18 +241,21 @@ export const useSlotRule = () => {
     // State
     slotRules,
     blockedDates,
+    excludedSlotsByDate,
     loading,
     saving,
     slotRuleId,
-    
+
     // Actions
     updateSlotRule,
     addBlockedDate,
     removeBlockedDate,
+    addExcludedSlot,
+    removeExcludedSlot,
     saveSlotRules, // This handles both create and update
     resetSlotRules,
     loadSlotRules,
-    
+
     // Computed values
     activeDaysCount: getActiveDaysCount(),
     totalAvailableHours: getTotalAvailableHours()
@@ -214,13 +267,13 @@ const isValidTimeRange = (startTime: string, endTime: string): boolean => {
   if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
     return false;
   }
-  
+
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  
+
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
-  
+
   return startMinutes < endMinutes;
 };
 
@@ -232,7 +285,7 @@ const isValidTimeFormat = (time: string): boolean => {
 const isValidDateFormat = (date: string): boolean => {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(date)) return false;
-  
+
   const parsedDate = new Date(date);
   return parsedDate instanceof Date && !isNaN(parsedDate.getTime());
 };
@@ -241,12 +294,12 @@ const calculateAvailableHours = (startTime: string, endTime: string): number => 
   if (!isValidTimeRange(startTime, endTime)) {
     return 0;
   }
-  
+
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  
+
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
-  
+
   return (endMinutes - startMinutes) / 60;
 };

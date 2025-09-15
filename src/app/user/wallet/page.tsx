@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { FloatingMascot } from "@/components/ui/floating-mascot"
 import { UseUserWallet } from "@/hooks/useUserWallet"
+import Paginator from "../../../components/ui/paginator";
 import {
   Wallet,
   TrendingUp,
@@ -24,11 +25,18 @@ import {
 export default function WalletPage() {
   const [selectedFilter, setSelectedFilter] = useState("all")
   const {summary,transactions,loading,error}=UseUserWallet()
+  const [page, setPage] = useState(1)
+  const pageSize = 6
 
   const filteredTransactions = useMemo(() => {
     if (selectedFilter === "all") return transactions
     return transactions.filter((t) => t.type === selectedFilter)
   }, [transactions, selectedFilter])
+
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredTransactions.slice(start, start + pageSize)
+  }, [filteredTransactions, page])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -146,7 +154,7 @@ export default function WalletPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {loading? [] : filteredTransactions.map((transaction, index) => (
+                    {loading? [] : paged.map((transaction, index) => (
                         <motion.tr
                           key={transaction.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -156,7 +164,7 @@ export default function WalletPage() {
                         >
                           <td className="py-4 px-2">
                             <div className="w-8 h-8 bg-[#BC8CFF]/20 rounded-lg flex items-center justify-center">
-                              <span className="text-[#BC8CFF] font-semibold text-sm">{transaction.id.slice(-6)}</span>
+                            <span className="text-[#BC8CFF] font-semibold text-sm">{(((page-1)*pageSize)+index+1).toString()}</span>
                             </div>
                           </td>
                           <td className="py-4 px-2">
@@ -207,6 +215,16 @@ export default function WalletPage() {
             </Card>
           </motion.div>
         </div>
+         {!loading && filteredTransactions.length > 0 && (
+                    <div className="mt-6 flex justify-center">
+                      <Paginator
+                        page={page}
+                        totalItems={transactions.length}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                      />
+                    </div>
+                  )}
       </div>
       <FloatingMascot />
     </div>

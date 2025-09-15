@@ -1,4 +1,5 @@
 import api from './api';
+import { FeedbackResponseData, SubmitFeedbackData} from '@/types/feedback.types';
 
 export interface VerificationData {
     profilePicture: File | null;
@@ -126,4 +127,25 @@ export const UpdateInterviewerProfile=async(
         },
     });
     return response.data;
+}
+
+export const submitFeedback=async(data:SubmitFeedbackData):Promise<SubmitFeedbackData>=>{
+    const response = await api.post('/interviewer/feedback', data);
+    return response.data;
+}
+
+export const listInterviewerFeedbacks = async():Promise<FeedbackResponseData[]>=>{
+    const response=await api.get('/interviewer/feedback')
+    return response.data
+}
+
+export const getFeedbackById=async(id:string):Promise<FeedbackResponseData>=>{
+    const response = await api.get(`/interviewer/feedback/${id}`);
+    return response.data;
+
+}
+
+export const getUserRatingByBooking=async(bookingId:string)=>{
+    const response = await api.get(`/interviewer/rating/${bookingId}`)
+    return response.data
 }

@@ -1,15 +1,16 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { fetchPendingInterviewers, approveInterviewer,rejectInterviewer,fetchAllUsers } from '@/services/adminService';
-import {toast} from 'sonner'
-import { 
-  Search, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
+import { fetchPendingInterviewers, approveInterviewer, rejectInterviewer, fetchAllUsers } from '@/services/adminService';
+import { toast } from 'sonner'
+import Paginator from '@/components/ui/paginator'
+import {
+  Search,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
   Calendar,
   User,
   Briefcase,
@@ -69,14 +70,14 @@ const itemVariants = {
 
 export default function InterviewRequests() {
   const [applications, setApplications] = useState<InterviewerApplication[]>([]);
-  const [loading,setLoading]=useState(true)
+  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [approvedCount,setApprovedCount]=useState(0)
-  const [rejectedCount,setRejectedCount]=useState(0)
-  const [totalApplicationsCount,setTotalApplicationCount]=useState(0)
-  
+  const [approvedCount, setApprovedCount] = useState(0)
+  const [rejectedCount, setRejectedCount] = useState(0)
+  const [totalApplicationsCount, setTotalApplicationCount] = useState(0)
+
   const [selectedApplication, setSelectedApplication] = useState<InterviewerApplication | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showResume, setShowResume] = useState(false);
@@ -85,56 +86,66 @@ export default function InterviewRequests() {
   const [applicationToReject, setApplicationToReject] = useState<string | null>(null);
   const [isConfirmingReject, setIsConfirmingReject] = useState(false);
 
-  useEffect(()=>{
+  useEffect(() => {
     loadingPendingInterviewers();
-  },[])
+  }, [])
 
-  const loadingPendingInterviewers=async()=>{
+  const loadingPendingInterviewers = async () => {
     try {
       setLoading(true)
-      const [pendingData,allUsersData]=await Promise.all([
+      const [pendingData, allUsersData] = await Promise.all([
         fetchPendingInterviewers(),
         fetchAllUsers()
       ])
 
-      const interviewers=allUsersData.filter((user:any)=> user.role==='interviewer'||user.role==='Interviewer')
-      const approved=interviewers.filter((user:any)=> user.isApproved).length
-      const total=interviewers.length
-      const rejected=Math.max(0,total-approved-pendingData.length)
+      const interviewers = allUsersData.filter((user: any) => user.role === 'interviewer' || user.role === 'Interviewer')
+      const approved = interviewers.filter((user: any) => user.isApproved).length
+      const total = interviewers.length
+      const rejected = Math.max(0, total - approved - pendingData.length)
 
       setApplications(pendingData)
       setApprovedCount(approved)
       setRejectedCount(rejected)
       setTotalApplicationCount(total)
     } catch (error) {
-      console.error("Error fetching pending interviewers : ",error)
+      console.error("Error fetching pending interviewers : ", error)
       toast.error('Failed to load pending interviewers')
-    }finally{
+    } finally {
       setLoading(false)
     }
   }
 
   const filteredApplications = applications.filter(app => {
-    const matchesSearch=app.name.toLowerCase().includes(searchTerm.toLowerCase())||
-                        app.email.toLowerCase().includes(searchTerm.toLowerCase())||
-                        (app.profile?.jobTitle && app.profile.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()))
-    
+    const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (app.profile?.jobTitle && app.profile.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()))
+
     return matchesSearch;
   });
+
+  // Pagination (same style as admin user listing)
+  const [page, setPage] = useState(1);
+  const pageSize = 3;
+  useEffect(() => { setPage(1); }, [searchTerm, applications]);
+  const totalItems = filteredApplications.length;
+  const pagedApplications = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredApplications.slice(start, start + pageSize);
+  }, [filteredApplications, page, pageSize]);
 
   const handleApprove = async (applicationId: string) => {
     try {
       await approveInterviewer(applicationId)
       toast.success("Interviewer approved successfully")
       setApplications(applications.filter(app => app.id !== applicationId));
-      setApprovedCount(prev=>prev+1)
+      setApprovedCount(prev => prev + 1)
     } catch (error) {
-      console.error("Error approving interviewer:",error)
+      console.error("Error approving interviewer:", error)
       toast.error("Failed to approve interviewer")
     }
   };
 
-   const handleReject = (applicationId: string) => {
+  const handleReject = (applicationId: string) => {
     setApplicationToReject(applicationId);
     setShowRejectModal(true);
   };
@@ -151,9 +162,9 @@ export default function InterviewRequests() {
       toast.success('Interviewer rejected successfully');
       setApplications(applications.filter(app => app.id !== applicationToReject));
       setRejectedCount(prev => prev + 1);
-      
+
       // Reset modal state
-     setShowRejectModal(false);
+      setShowRejectModal(false);
       setRejectionReason('');
       setApplicationToReject(null);
     } catch (error) {
@@ -161,15 +172,15 @@ export default function InterviewRequests() {
       toast.error('Failed to reject interviewer');
     } finally {
       setIsConfirmingReject(false);
-     }
-   };
+    }
+  };
 
   const cancelReject = () => {
     if (isConfirmingReject) return; // Prevent closing while processing
     setShowRejectModal(false);
     setRejectionReason('');
     setApplicationToReject(null);
- };
+  };
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -184,7 +195,7 @@ export default function InterviewRequests() {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-   return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showRejectModal, rejectionReason, isConfirmingReject]);
 
   const handleViewProfile = (application: InterviewerApplication) => {
@@ -218,13 +229,13 @@ export default function InterviewRequests() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <motion.div 
+      <motion.div
         className="flex items-center justify-between"
         variants={itemVariants}
       >
@@ -232,7 +243,7 @@ export default function InterviewRequests() {
           <h1 className="text-3xl font-bold gradient-text">Interviewer Applications</h1>
           <p className="text-gray-400 mt-1">Review and approve interviewer applications</p>
         </div>
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-4 glass-card-light rounded-lg px-4 py-2"
           whileHover={{ scale: 1.05 }}
         >
@@ -244,11 +255,11 @@ export default function InterviewRequests() {
       </motion.div>
 
       {/* Stats Cards */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-4 gap-6"
         variants={containerVariants}
       >
-        <motion.div 
+        <motion.div
           className="stat-card-glow rounded-xl p-6"
           variants={itemVariants}
           whileHover={{ scale: 1.02 }}
@@ -266,7 +277,7 @@ export default function InterviewRequests() {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="stat-card-glow rounded-xl p-6"
           variants={itemVariants}
           whileHover={{ scale: 1.02 }}
@@ -284,7 +295,7 @@ export default function InterviewRequests() {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="stat-card-glow rounded-xl p-6"
           variants={itemVariants}
           whileHover={{ scale: 1.02 }}
@@ -301,8 +312,8 @@ export default function InterviewRequests() {
             </div>
           </div>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           className="stat-card-glow rounded-xl p-6"
           variants={itemVariants}
           whileHover={{ scale: 1.02 }}
@@ -320,7 +331,7 @@ export default function InterviewRequests() {
       </motion.div>
 
       {/* Filters */}
-      <motion.div 
+      <motion.div
         className="glass-card rounded-xl p-6"
         variants={itemVariants}
       >
@@ -336,7 +347,7 @@ export default function InterviewRequests() {
               whileFocus={{ scale: 1.02 }}
             />
           </div>
-          
+
           <div className="flex items-center space-x-2 px-4 py-3 glass-card-light rounded-lg">
             <Filter className="w-4 h-4 text-purple-400" />
             <span className="text-sm text-gray-300">Showing: Pending Applications Only</span>
@@ -345,7 +356,7 @@ export default function InterviewRequests() {
       </motion.div>
 
       {/* Applications List */}
-      <motion.div 
+      <motion.div
         className="space-y-4"
         variants={containerVariants}
       >
@@ -360,163 +371,163 @@ export default function InterviewRequests() {
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Pending Applications</h3>
             <p className="text-gray-400">There are no interviewer applications pending review at the moment.</p>
-         </div>
+          </div>
         ) : (
-          filteredApplications.map((application, index) => (
-          <motion.div 
-            key={application.id} 
-            className="glass-card rounded-xl p-6"
-            variants={itemVariants}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.01 }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-4 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-                    {application.profile?.profilePic ? (
-                      <img 
-                        src={application.profile.profilePic} 
-                        alt={`${application.name}'s profile`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to initials if image fails to load
-                          e.currentTarget.style.display = 'none';
-                           const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (nextElement) {
-                            nextElement.style.display = 'flex';
-                          }
-                         }}
-                      />
-                    ) : null}
-                    <div className={`w-full h-full flex items-center justify-center ${application.profile?.profilePic ? 'hidden' : 'flex'}`}>
-                      {application.name.charAt(0).toUpperCase()}
+          pagedApplications.map((application, index) => (
+            <motion.div
+              key={application.id}
+              className="glass-card rounded-xl p-6"
+              variants={itemVariants}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+                      {application.profile?.profilePic ? (
+                        <img
+                          src={application.profile.profilePic}
+                          alt={`${application.name}'s profile`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback to initials if image fails to load
+                            e.currentTarget.style.display = 'none';
+                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (nextElement) {
+                              nextElement.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-full h-full flex items-center justify-center ${application.profile?.profilePic ? 'hidden' : 'flex'}`}>
+                        {application.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-xl font-semibold text-white">{application.name}</h3>
+                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                          Pending
+                        </span>
+                      </div>
+                      <p className="text-purple-300 font-medium">{application.profile?.jobTitle || 'Not specified'}</p>
+                      <p className="text-gray-400 text-sm">{application.email}</p>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-xl font-semibold text-white">{application.name}</h3>
-                      <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                        Pending
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="glass-card-light rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Award className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm font-medium text-gray-300">Experience</span>
+                      </div>
+                      <p className="text-white font-medium">{application.profile?.yearsOfExperience || 0} years</p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-lg mt-1 ${getExperienceLevel(application.profile?.yearsOfExperience || 0).color}`}>
+                        {getExperienceLevel(application.profile?.yearsOfExperience || 0).label}
                       </span>
                     </div>
-                    <p className="text-purple-300 font-medium">{application.profile?.jobTitle || 'Not specified'}</p>
-                    <p className="text-gray-400 text-sm">{application.email}</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="glass-card-light rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Award className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-medium text-gray-300">Experience</span>
-                    </div>
-                    <p className="text-white font-medium">{application.profile?.yearsOfExperience || 0} years</p>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-lg mt-1 ${getExperienceLevel(application.profile?.yearsOfExperience || 0).color}`}>
-                      {getExperienceLevel(application.profile?.yearsOfExperience || 0).label}
-                    </span>
-                  </div>
-                  
-                  <div className="glass-card-light rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Mail className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-medium text-gray-300">Contact</span>
-                    </div>
-                   <p className="text-white font-medium text-sm">{application.email}</p>
-                  </div>
-                  
-                  <div className="glass-card-light rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-medium text-gray-300">Resume</span>
-                    </div>
-                    {application.profile?.resume ? (
-                      <div>
-                        <p className="text-white font-medium text-sm">Resume uploaded</p>
-                        <a 
-                          href={application.profile.resume} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-400 text-sm hover:underline"
-                        >
-                          View Resume
-                        </a>
+
+                    <div className="glass-card-light rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Mail className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm font-medium text-gray-300">Contact</span>
                       </div>
-                    ) : (
-                      <p className="text-gray-400 text-sm">No resume uploaded</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-300 mb-2">Technical Skills</h4>
-                  <div className="flex flex-wrap gap-2">
-                  {application.profile?.technicalSkills ? (
-                      <>
-                        {application.profile.technicalSkills.slice(0, 6).map((skill, skillIndex) => (
-                          <span 
-                            key={skillIndex}
-                            className="px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-sm rounded-lg border border-purple-500/30"
+                      <p className="text-white font-medium text-sm">{application.email}</p>
+                    </div>
+
+                    <div className="glass-card-light rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <FileText className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm font-medium text-gray-300">Resume</span>
+                      </div>
+                      {application.profile?.resume ? (
+                        <div>
+                          <p className="text-white font-medium text-sm">Resume uploaded</p>
+                          <a
+                            href={application.profile.resume}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 text-sm hover:underline"
                           >
-                            {skill}
-                          </span>
-                        ))}
-                        {application.profile.technicalSkills.length > 6 && (
-                          <span className="px-3 py-1 bg-gray-500/20 text-gray-400 text-sm rounded-lg">
-                            +{application.profile.technicalSkills.length - 6} more
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No skills specified</span>
-                    )}
+                            View Resume
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-sm">No resume uploaded</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-300 mb-2">Technical Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {application.profile?.technicalSkills ? (
+                        <>
+                          {application.profile.technicalSkills.slice(0, 6).map((skill, skillIndex) => (
+                            <span
+                              key={skillIndex}
+                              className="px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-sm rounded-lg border border-purple-500/30"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                          {application.profile.technicalSkills.length > 6 && (
+                            <span className="px-3 py-1 bg-gray-500/20 text-gray-400 text-sm rounded-lg">
+                              +{application.profile.technicalSkills.length - 6} more
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No skills specified</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-300">
+                    <p className="line-clamp-2">{application.profile?.professionalBio}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-purple-500/20">
+                    <div className="text-sm text-gray-400">
+                      Applied: {new Date(application.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm text-yellow-400">
+                      Status: Pending Review
+                    </div>
                   </div>
                 </div>
-                
-                <div className="text-sm text-gray-300">
-                  <p className="line-clamp-2">{application.profile?.professionalBio}</p>
-                </div>
-                
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-purple-500/20">
-                  <div className="text-sm text-gray-400">
-                    Applied: {new Date(application.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="text-sm text-yellow-400">
-                    Status: Pending Review
-                  </div>
+
+                <div className="flex flex-col items-center space-y-2 ml-6">
+                  <motion.button
+                    onClick={() => handleViewProfile(application)}
+                    className="flex items-center space-x-2 px-4 py-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors"
+                    title="View Full Profile"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Eye className="w-5 h-5" />
+                    <span>View</span>
+                  </motion.button>
                 </div>
               </div>
-              
-              <div className="flex flex-col items-center space-y-2 ml-6">
-                <motion.button
-                  onClick={() => handleViewProfile(application)}
-                  className="flex items-center space-x-2 px-4 py-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors"
-                   title="View Full Profile"
-                   whileHover={{ scale: 1.1 }}
-                   whileTap={{ scale: 0.9 }}
-                >
-                  <Eye className="w-5 h-5" />
-                  <span>View</span>
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        ))
-      )}
+            </motion.div>
+          ))
+        )}
       </motion.div>
 
       {/* Profile Modal */}
       {showProfile && selectedApplication && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setShowProfile(false)}
         >
-          <motion.div 
+          <motion.div
             className="glass-card rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -534,14 +545,14 @@ export default function InterviewRequests() {
                 <XCircle className="w-6 h-6" />
               </motion.button>
             </div>
-            
+
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-start space-x-6">
-              <div className="w-24 h-24 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-3xl overflow-hidden">
+                <div className="w-24 h-24 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-3xl overflow-hidden">
                   {selectedApplication.profile?.profilePic ? (
-                    <img 
-                      src={selectedApplication.profile.profilePic} 
+                    <img
+                      src={selectedApplication.profile.profilePic}
                       alt={`${selectedApplication.name}'s profile`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -560,12 +571,12 @@ export default function InterviewRequests() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-2xl font-semibold text-white">{selectedApplication.name}</h3>
+                    <h3 className="text-2xl font-semibold text-white">{selectedApplication.name}</h3>
                     <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                       Pending
                     </span>
                   </div>
-                 <p className="text-purple-300 font-medium text-lg">{selectedApplication.profile?.jobTitle || 'Not specified'}</p>
+                  <p className="text-purple-300 font-medium text-lg">{selectedApplication.profile?.jobTitle || 'Not specified'}</p>
                   <p className="text-gray-400">{selectedApplication.email}</p>
                   <div className="flex items-center space-x-4 mt-3">
                     <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-lg ${getExperienceLevel(selectedApplication.profile?.yearsOfExperience || 0).color}`}>
@@ -574,7 +585,7 @@ export default function InterviewRequests() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Contact Information */}
               <div>
                 <h4 className="text-lg font-semibold text-white mb-4">Contact Information</h4>
@@ -586,33 +597,33 @@ export default function InterviewRequests() {
                     </div>
                     <p className="text-white">{selectedApplication.email}</p>
                   </div>
-                  
+
                   <div className="glass-card-light rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="w-4 h-4 text-purple-400" />
+                      <Calendar className="w-4 h-4 text-purple-400" />
                       <span className="text-sm font-medium text-gray-300">Applied Date</span>
                     </div>
                     <p className="text-white">{new Date(selectedApplication.createdAt).toLocaleDateString()}</p>
                   </div>
-                  
+
                   <div className="glass-card-light rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
-                    <Award className="w-4 h-4 text-purple-400" />
+                      <Award className="w-4 h-4 text-purple-400" />
                       <span className="text-sm font-medium text-gray-300">Experience</span>
                     </div>
                     <p className="text-white">{selectedApplication.profile?.yearsOfExperience || 0} years</p>
                   </div>
-                  
+
                   <div className="glass-card-light rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
-                    <Briefcase className="w-4 h-4 text-purple-400" />
+                      <Briefcase className="w-4 h-4 text-purple-400" />
                       <span className="text-sm font-medium text-gray-300">Job Title</span>
                     </div>
                     <p className="text-white">{selectedApplication.profile?.jobTitle || 'Not specified'}</p>
                   </div>
                 </div>
               </div>
-              
+
               {/* Professional Bio */}
               {selectedApplication.profile?.professionalBio && (
                 <div>
@@ -622,14 +633,14 @@ export default function InterviewRequests() {
                   </div>
                 </div>
               )}
-              
+
               {/* Technical Skills */}
               <div>
                 <h4 className="text-lg font-semibold text-white mb-4">Technical Skills</h4>
                 <div className="flex flex-wrap gap-3">
-                {selectedApplication.profile?.technicalSkills ? (
+                  {selectedApplication.profile?.technicalSkills ? (
                     selectedApplication.profile.technicalSkills.map((skill, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 rounded-lg border border-purple-500/30 font-medium"
                       >
@@ -641,12 +652,12 @@ export default function InterviewRequests() {
                   )}
                 </div>
               </div>
-              
+
               {/* Resume Information */}
               <div>
                 <h4 className="text-lg font-semibold text-white mb-4">Resume</h4>
                 <div className="glass-card-light rounded-lg p-4">
-                {selectedApplication.profile?.resume ? (
+                  {selectedApplication.profile?.resume ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <FileText className="w-8 h-8 text-purple-400" />
@@ -656,8 +667,8 @@ export default function InterviewRequests() {
                             Uploaded on {new Date(selectedApplication.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                    </div>
-                    <div className="flex space-x-2">
+                      </div>
+                      <div className="flex space-x-2">
                         <motion.button
                           onClick={() => window.open(selectedApplication.profile?.resume, '_blank')}
                           className="glow-button text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2"
@@ -686,7 +697,7 @@ export default function InterviewRequests() {
                   )}
                 </div>
               </div>
-              
+
               {/* Application Status */}
               <div>
                 <h4 className="text-lg font-semibold text-white mb-4">Application Status</h4>
@@ -697,7 +708,7 @@ export default function InterviewRequests() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Status:</span>
-                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                       Pending
                     </span>
                   </div>
@@ -707,7 +718,7 @@ export default function InterviewRequests() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex space-x-4 pt-4">
                 <motion.button
@@ -742,14 +753,14 @@ export default function InterviewRequests() {
 
       {/* Resume Viewer Modal */}
       {showResume && selectedApplication && selectedApplication.profile?.resume && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setShowResume(false)}
         >
-          <motion.div 
+          <motion.div
             className="glass-card rounded-xl p-6 max-w-5xl w-full max-h-[90vh] overflow-hidden"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -781,13 +792,13 @@ export default function InterviewRequests() {
                 </motion.button>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg h-[70vh] flex items-center justify-center">
               <div className="text-center text-gray-600">
                 <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <p className="text-lg font-medium">Resume Preview</p>
                 <p className="text-sm text-gray-500 mt-2">
-                {selectedApplication.name}'s Resume
+                  {selectedApplication.name}'s Resume
                 </p>
                 <p className="text-xs text-gray-400 mt-4">
                   In a real application, this would show the actual PDF/DOCX content
@@ -806,16 +817,16 @@ export default function InterviewRequests() {
         </motion.div>
       )}
 
-       {/* Rejection Modal */}
+      {/* Rejection Modal */}
       {showRejectModal && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={cancelReject}
         >
-          <motion.div 
+          <motion.div
             className="glass-card rounded-xl p-8 max-w-md w-full"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -863,7 +874,7 @@ export default function InterviewRequests() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Custom Rejection Reason *
                 </label>
-               <textarea
+                <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Please explain why this application is being rejected..."
@@ -916,10 +927,17 @@ export default function InterviewRequests() {
               </div>
             </div>
           </motion.div>
-       </motion.div>
+        </motion.div>
       )}
+      <div className="mt-6 flex justify-center">
+        <Paginator
+          page={page}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          pageSize={pageSize}
+        />
+      </div>
 
-      
     </motion.div>
   );
 }

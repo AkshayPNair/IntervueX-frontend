@@ -12,7 +12,8 @@ import {
   MessageSquare,
   LogOut,                                                                                                                                                                                                                                                                                                                                                                                           
   CalendarIcon,
-  Wallet,                                                                                                                                                                                                                   
+  Wallet,
+  MessageCircleMore,                                                                                                                                                                                                                   
 } from "lucide-react"
 import {useAuth} from '../hooks/useAuth'
 
@@ -93,6 +94,12 @@ export const Navigation = ({ isLoggedIn = false, onLogout }: NavigationProps) =>
                 icon={Wallet} 
                 label="Wallet" 
                 isActive={pathname === '/user/wallet'} 
+              />
+              <NavButton 
+                href="/user/chat" 
+                icon={MessageCircleMore} 
+                label="Chat" 
+                isActive={pathname === '/user/chat'} 
               />
               <NavButton 
                 href="/user/interviewers" 
