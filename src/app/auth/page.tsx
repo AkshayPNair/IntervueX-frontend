@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect} from "react"
 import { motion } from "framer-motion"
 import Head from "next/head"
 import { useRouter } from "next/navigation"
@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 
 export default function Auth() {
   const router = useRouter()
-  const { login, signup } = useAuth()
+  const { login, signup,user } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [formData, setFormData] = useState({
     name: "",
@@ -34,6 +34,17 @@ export default function Auth() {
   const [showRoleModal, setShowRoleModal] = useState<boolean>(false)
   const [googleUserName, setGoogleUserName] = useState<string>('')
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'interviewer') {
+      router.replace('/interviewer/dashboard')
+    } else if (user.role === 'admin') {
+      router.replace('/admin/dashboard')
+    } else {
+      router.replace('/user/dashboard')
+    }
+  }, [user, router])
 
   // Background particles
   const particles = Array.from({ length: 50 }, (_, i) => <Particle key={i} delay={i * 0.1} />)
@@ -149,11 +160,11 @@ export default function Auth() {
         }
         const user = await login(formData.email, formData.password);
         if (user.role === 'interviewer') {
-          router.push('/interviewer/dashboard')
+          router.replace('/interviewer/dashboard')
         } else if (user.role === 'admin') {
-          router.push('/admin/dashboard')
+          router.replace('/admin/dashboard')
         } else {
-          router.push('/user/dashboard')
+          router.replace('/user/dashboard')
         }
 
       }

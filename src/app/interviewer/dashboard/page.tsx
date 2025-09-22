@@ -6,14 +6,41 @@ import { useRouter } from "next/navigation";
 import { Button } from "../../../components/ui/intButton";
 import { Badge } from "../../../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { Calendar, Clock, Users, Video, Star, Eye, Award, TrendingUp, Target, Zap, Globe, Plus } from "lucide-react";
+import { Calendar, Clock, Users, Video, Star, Eye, Award, TrendingUp, Target, Zap, Globe, Plus, User, MessageCircle } from "lucide-react";
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { getVerificationStatus,VerificationStatusData } from "../../../services/interviewerService";
+import { useInterviewerDashboard } from "@/hooks/useInterviewerDashboard";
+import { useInterviewerBookings } from "@/hooks/useInterviewerBookings";
+import { BookingStatus, InterviewerBooking } from "@/types/booking.types";
+import { useUserRatingByBookingId } from "@/hooks/useUserRatingByBookingId";
 
 const Dashboard = () => {
   const router = useRouter();
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatusData|null>(null)
   const [loading, setLoading] = useState(true)
+  const { stats: dashStats, upcomingSessions, loading: dashLoading } = useInterviewerDashboard()
+  const { bookings, loading: bookingsLoading } = useInterviewerBookings()
+
+  const recentSessions = (bookings || [])
+    .filter(b => b.status === BookingStatus.COMPLETED)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 6)
+
+  const InterviewerBookingRating = ({ bookingId }: { bookingId: string }) => {
+    const { data, loading } = useUserRatingByBookingId(bookingId)
+    const rating = data?.rating ?? 0
+    if (loading) return <span className="text-xs text-purple-300">Loading...</span>
+   return (
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          {[1,2,3,4,5].map(star => (
+            <Star key={star} className={`w-4 h-4 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} />
+          ))}
+        </div>
+        <span className="text-xs text-purple-300">{rating}/5</span>
+      </div>
+    )
+  }  
 
   useEffect(() => {
     const checkVerificationStatus = async () => {
@@ -41,99 +68,46 @@ const Dashboard = () => {
     checkVerificationStatus()
   }, [router])
 
-  const upcomingInterviews = [
-    {
-      id: 1,
-      candidate: "Alice Johnson",
-      position: "Frontend Developer",
-      time: "2:00 PM",
-      date: "Today",
-      status: "scheduled"
-    },
-    {
-      id: 2,
-      candidate: "Bob Smith",
-      position: "Backend Engineer",
-      time: "4:30 PM",
-      date: "Tomorrow",
-      status: "confirmed"
-    },
-    {
-      id: 3,
-      candidate: "Sarah Wilson",
-      position: "Full Stack Developer",
-      time: "10:00 AM",
-      date: "Dec 20",
-      status: "scheduled"
-    }
-  ];
-
-  const recentSessions = [
-    {
-      id: 1,
-      candidate: "David Wilson",
-      position: "DevOps Engineer",
-      date: "Dec 15, 2024",
-      rating: 4,
-      status: "completed"
-    },
-    {
-      id: 2,
-      candidate: "Emma Brown",
-      position: "React Developer",
-      date: "Dec 14, 2024",
-      rating: 5,
-      status: "completed"
-    },
-    {
-      id: 3,
-      candidate: "Frank Miller",
-      position: "Python Developer",
-      date: "Dec 13, 2024",
-      rating: 3,
-      status: "completed"
-    }
-  ];
 
   const stats = [
-    { title: "Total Interviews", value: "47", icon: Users, color: "text-blue-400", bgColor: "from-blue-500/20 to-blue-600/20", titleColor: "text-blue-300" },
-    { title: "This Week", value: "8", icon: Calendar, color: "text-green-400", bgColor: "from-green-500/20 to-green-600/20", titleColor: "text-green-300" },
-    { title: "Avg Rating", value: "4.2", icon: Star, color: "text-yellow-400", bgColor: "from-yellow-500/20 to-yellow-600/20", titleColor: "text-yellow-300" },
-    { title: "Active Sessions", value: "1", icon: Video, color: "text-purple-400", bgColor: "from-purple-500/20 to-purple-600/20", titleColor: "text-purple-300" }
+     { title: "Total Interviews", value: String(dashStats.totalInterviews || 0), icon: Users, color: "text-blue-400", bgColor: "from-blue-500/20 to-blue-600/20", titleColor: "text-blue-300" },
+    { title: "Hours Conducted", value: String(dashStats.hoursConducted || 0), icon: Clock, color: "text-green-400", bgColor: "from-green-500/20 to-green-600/20", titleColor: "text-green-300" },
+    { title: "Avg Rating", value: Number(dashStats.averageRating || 0).toFixed(1), icon: Star, color: "text-yellow-400", bgColor: "from-yellow-500/20 to-yellow-600/20", titleColor: "text-yellow-300" },
+    { title: "Success Rate", value: `${dashStats.successRate || 0}%`, icon: TrendingUp, color: "text-purple-400", bgColor: "from-purple-500/20 to-purple-600/20", titleColor: "text-purple-300" }
   ];
 
   const quickActions = [
     {
-      title: "Schedule Interview",
+      title: "Sessions",
       icon: Calendar,
       color: "text-blue-400",
       bgColor: "from-blue-500/20 to-blue-600/20",
-      action: () => router.push("/sessions")
+      action: () => router.push("/interviewer/sessions")
     },
     {
-      title: "View Analytics",
-      icon: TrendingUp,
+      title: "Profile",
+      icon: User,
       color: "text-green-400",
       bgColor: "from-green-500/20 to-green-600/20",
-      action: () => router.push("/history")
+      action: () => router.push("/interviewer/profile")
     },
     {
-      title: "Candidate Pool",
-      icon: Users,
+      title: "Chat",
+      icon: MessageCircle,
       color: "text-purple-400",
       bgColor: "from-purple-500/20 to-purple-600/20",
-      action: () => router.push("/sessions")
+      action: () => router.push("/interviewer/chat")
     },
     {
       title: "Settings",
       icon: Target,
       color: "text-yellow-400",
       bgColor: "from-yellow-500/20 to-yellow-600/20",
-      action: () => router.push("/settings")
+      action: () => router.push("/interviewer/settings")
     }
   ];
 
-  if (loading) {
+  if (loading || dashLoading || bookingsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
         <ParticleBackground />
@@ -157,12 +131,71 @@ const Dashboard = () => {
   }
 
 
-  const recentActivity = [
-    { action: "Interview completed", candidate: "John Doe", time: "2 hours ago", type: "success" },
-    { action: "New candidate registered", candidate: "Jane Smith", time: "4 hours ago", type: "info" },
-    { action: "Interview scheduled", candidate: "Mike Johnson", time: "6 hours ago", type: "warning" },
-    { action: "Feedback submitted", candidate: "Sarah Connor", time: "1 day ago", type: "success" }
+  // Helper function to format time
+  const formatTime = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 0) {
+      // Future date
+      const futureHours = Math.abs(diffInHours);
+      if (futureHours < 24) return `In ${futureHours} hour${futureHours > 1 ? 's' : ''}`;
+      return date.toLocaleDateString();
+    }
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    if (diffInHours < 48) return "Yesterday";
+    return date.toLocaleDateString();
+  };
+
+  // Generate recent activity from both completed and upcoming sessions
+  const allActivities = [
+    // Completed sessions
+    ...recentSessions.map(session => ({
+      action: "Interview completed",
+      candidate: session.userName,
+      time: new Date(session.date).getTime(),
+      displayTime: formatTime(new Date(session.date)),
+      type: "success" as const,
+      session
+    })),
+    // Upcoming sessions
+    ...upcomingSessions.slice(0, 4).map(session => {
+      const sessionDate = new Date(session.date);
+      const now = new Date();
+      const isToday = sessionDate.toDateString() === now.toDateString();
+
+      return {
+        action: isToday ? "Interview today" : "Interview scheduled",
+        candidate: session.userName,
+        time: sessionDate.getTime(),
+        displayTime: formatTime(sessionDate),
+        type: isToday ? "warning" : "info" as const,
+        session
+      };
+    })
   ];
+
+  // Sort by time (most recent first) and take top 6
+  const recentActivity = allActivities
+    .sort((a, b) => b.time - a.time)
+    .slice(0, 6);
+
+  // Group upcoming sessions by day of week
+  const upcomingByDay = upcomingSessions.reduce((acc, session) => {
+    const date = new Date(session.date);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    if (!acc[dayName]) {
+      acc[dayName] = [];
+    }
+    acc[dayName].push(session);
+    return acc;
+  }, {} as Record<string, typeof upcomingSessions>);
+
+  // Get today's sessions count
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const todayCount = upcomingByDay[today]?.length || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
@@ -224,15 +257,25 @@ const Dashboard = () => {
               {recentActivity.map((activity, index) => (
                 <div key={index} className="flex items-center space-x-3 p-3 glass-card rounded-xl">
                   <div className={`w-2 h-2 rounded-full ${activity.type === 'success' ? 'bg-green-400' :
-                    activity.type === 'warning' ? 'bg-yellow-400' : 'bg-blue-400'
+                    activity.type === 'info' ? 'bg-blue-400' : 'bg-yellow-400'
                     }`}></div>
                   <div className="flex-1">
                     <p className="text-sm text-white font-medium">{activity.action}</p>
                     <p className="text-xs text-purple-300">{activity.candidate}</p>
                   </div>
-                  <span className="text-xs text-purple-400">{activity.time}</span>
+                  <span className="text-xs text-purple-400">{activity.displayTime}</span>
                 </div>
               ))}
+              {recentActivity.length === 0 && (
+                <div className="flex items-center space-x-3 p-3 glass-card rounded-xl">
+                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="flex-1">
+                    <p className="text-sm text-white font-medium">No recent activity</p>
+                    <p className="text-xs text-purple-300">Check back later</p>
+                  </div>
+                  <span className="text-xs text-purple-400">-</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,24 +288,24 @@ const Dashboard = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-purple-300">Success Rate</span>
-                <span className="text-green-400 font-bold">89%</span>
+                <span className="text-green-400 font-bold">{dashStats.successRate || 0}%</span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2">
-                <div className="bg-green-400 h-2 rounded-full" style={{ width: '89%' }}></div>
+                <div className="bg-green-400 h-2 rounded-full" style={{ width: `${dashStats.successRate || 0}%` }}></div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-purple-300">Avg Duration</span>
-                <span className="text-blue-400 font-bold">45 min</span>
+                <span className="text-purple-300">Hours Conducted</span>
+                <span className="text-blue-400 font-bold">{dashStats.hoursConducted || 0}h</span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2">
-                <div className="bg-blue-400 h-2 rounded-full" style={{ width: '75%' }}></div>
+                <div className="bg-blue-400 h-2 rounded-full" style={{ width: `${Math.min((dashStats.hoursConducted || 0) * 10, 100)}%` }}></div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-purple-300">Satisfaction</span>
-                <span className="text-yellow-400 font-bold">4.2/5</span>
+                <span className="text-purple-300">Avg Rating</span>
+                <span className="text-yellow-400 font-bold">{Number(dashStats.averageRating || 0)}/5</span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2">
-                <div className="bg-yellow-400 h-2 rounded-full" style={{ width: '84%' }}></div>
+                <div className="bg-yellow-400 h-2 rounded-full" style={{ width: `${((dashStats.averageRating || 0) / 5) * 100}%` }}></div>
               </div>
             </div>
           </div>
@@ -274,27 +317,26 @@ const Dashboard = () => {
               This Week
             </h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 glass-card rounded-xl">
-                <div>
-                  <p className="text-sm text-white font-medium">Today</p>
-                  <p className="text-xs text-purple-300">3 interviews</p>
+              {Object.entries(upcomingByDay).slice(0, 3).map(([day, sessions]) => (
+                <div key={day} className="flex justify-between items-center p-3 glass-card rounded-xl">
+                  <div>
+                    <p className="text-sm text-white font-medium">{day}</p>
+                    <p className="text-xs text-purple-300">{sessions.length} interview{sessions.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Badge className={day === today ? "status-live" : "status-scheduled"}>
+                    {day === today ? "Active" : "Scheduled"}
+                  </Badge>
                 </div>
-                <Badge className="status-live">Active</Badge>
-              </div>
-              <div className="flex justify-between items-center p-3 glass-card rounded-xl">
-                <div>
-                  <p className="text-sm text-white font-medium">Tomorrow</p>
-                  <p className="text-xs text-purple-300">2 interviews</p>
+              ))}
+              {Object.keys(upcomingByDay).length === 0 && (
+                <div className="flex justify-between items-center p-3 glass-card rounded-xl">
+                  <div>
+                    <p className="text-sm text-white font-medium">No upcoming interviews</p>
+                    <p className="text-xs text-purple-300">This week</p>
+                  </div>
+                  <Badge className="status-scheduled">None</Badge>
                 </div>
-                <Badge className="status-scheduled">Scheduled</Badge>
-              </div>
-              <div className="flex justify-between items-center p-3 glass-card rounded-xl">
-                <div>
-                  <p className="text-sm text-white font-medium">Friday</p>
-                  <p className="text-xs text-purple-300">1 interview</p>
-                </div>
-                <Badge className="status-scheduled">Scheduled</Badge>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -327,31 +369,31 @@ const Dashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {upcomingInterviews.map((interview) => (
-                    <div key={interview.id} className="glass-card p-6 rounded-2xl group border border-purple-400/20 hover:border-purple-400/40 transition-all duration-300">
+                {upcomingSessions.map((s) => (
+                    <div key={s.bookingId} className="glass-card p-6 rounded-2xl group border border-purple-400/20 hover:border-purple-400/40 transition-all duration-300">
                       <div className="flex flex-col space-y-4">
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 glow-button rounded-xl flex items-center justify-center">
                             <Users className="w-6 h-6 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-bold text-lg text-white glow-text">{interview.candidate}</h4>
-                            <p className="text-purple-300">{interview.position}</p>
+                             <h4 className="font-bold text-lg text-white glow-text">{s.userName}</h4>
+                            <p className="text-purple-300">{new Date(`${s.date}T${s.startTime}`).toLocaleString()}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-white">{interview.date}</p>
-                            <p className="text-sm text-purple-300">{interview.time}</p>
+                          <p className="text-sm font-semibold text-white">{new Date(`${s.date}`).toLocaleDateString()}</p>
+                            <p className="text-sm text-purple-300">{s.startTime} - {s.endTime}</p>
                           </div>
-                          <Badge className={`${interview.status === "confirmed" ? "status-scheduled" : "status-completed"} border-0 px-3 py-1 font-semibold rounded-full`}>
-                            {interview.status}
+                          <Badge className="status-scheduled border-0 px-3 py-1 font-semibold rounded-full">
+                            {s.durationMinutes} min
                           </Badge>
                         </div>
                         <Button size="lg" className="glow-button border-0 hover:scale-105 transition-transform w-full rounded-xl">
-                          <Link href={`/interview/${interview.id}`}>
+                        <Link href={`/interview/${s.bookingId}`}>
                             <Video className="w-4 h-4 mr-2" />
-                            Start Interview
+                            View Session
                           </Link>
                         </Button>
                       </div>
@@ -379,28 +421,21 @@ const Dashboard = () => {
                             <Users className="w-6 h-6 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-bold text-lg text-white glow-text">{session.candidate}</h4>
-                            <p className="text-purple-300">{session.position}</p>
+                            <h4 className="font-bold text-lg text-white glow-text">{session.userName}</h4>
+                            <p className="text-purple-300">{new Date(`${session.date}T${session.startTime}`).toLocaleString()}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-white">{session.date}</p>
-                            <div className="flex items-center space-x-1 justify-start mt-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-4 h-4 ${i < session.rating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`}
-                                />
-                              ))}
-                            </div>
+                            <p className="text-sm font-semibold text-white">{new Date(`${session.date}`).toLocaleDateString()}</p>
+                            <InterviewerBookingRating bookingId={session.id} />
                           </div>
                           <Badge className="status-completed border-0 px-3 py-1 font-semibold rounded-full">
                             {session.status}
                           </Badge>
                         </div>
                         <Button size="lg" variant="outline" className="glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 hover:scale-105 transition-all w-full rounded-xl">
-                          <Link href={`/feedback/${session.id}`}>
+                          <Link href={`/interviewer/feedback`}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Feedback
                           </Link>

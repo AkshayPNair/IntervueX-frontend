@@ -1,8 +1,12 @@
 import api from './api'
+import { FeedbackResponseData, SubmitInterviewerRatingData } from '@/types/feedback.types';
+import { UserDashboardResponse } from '@/types/dashboard.types';
+import { PaymentHistoryResponse } from '@/types/payment.types';
+import { ChangePasswordData } from '@/types/auth.types';
 
-export interface UserProfile{
-    id:string,
-    name: string;
+export interface UserProfile {
+  id: string,
+  name: string;
   email: string;
   profilePicture?: string;
   resume?: string;
@@ -16,26 +20,26 @@ export interface UpdateProfileData {
   resume?: File;
 }
 
-export const getUserProfile=async():Promise<UserProfile>=>{
-    const response=await api.get('/user/profile')
-    return response.data
+export const getUserProfile = async (): Promise<UserProfile> => {
+  const response = await api.get('/user/profile')
+  return response.data
 }
 
-export const updateUserProfile=async(profileData:UpdateProfileData):Promise<UserProfile>=>{
-    const formData=new FormData()
+export const updateUserProfile = async (profileData: UpdateProfileData): Promise<UserProfile> => {
+  const formData = new FormData()
 
-    if (profileData.name) {
+  if (profileData.name) {
     formData.append('name', profileData.name);
   }
-  
+
   if (profileData.skills) {
     formData.append('skills', JSON.stringify(profileData.skills));
   }
-  
+
   if (profileData.profilePicture) {
     formData.append('profilePic', profileData.profilePicture);
   }
-  
+
   if (profileData.resume) {
     formData.append('resume', profileData.resume);
   }
@@ -45,7 +49,7 @@ export const updateUserProfile=async(profileData:UpdateProfileData):Promise<User
       'Content-Type': 'multipart/form-data',
     },
   });
-  
+
   return response.data;
 }
 
@@ -58,8 +62,8 @@ export interface InterviewerProfile {
   professionalBio?: string;
   yearsOfExperience?: number;
   technicalSkills?: string[];
-  rating?: number; 
-  hourlyRate?: number; 
+  rating?: number;
+  hourlyRate?: number;
 }
 
 export const getAllInterviewers = async (): Promise<InterviewerProfile[]> => {
@@ -71,3 +75,43 @@ export const getInterviewerById = async (id: string): Promise<InterviewerProfile
   const response = await api.get(`/user/interviewers/${id}`);
   return response.data;
 };
+
+export const listUserFeedbacks = async (): Promise<FeedbackResponseData[]> => {
+  const response = await api.get('/user/feedback');
+  return response.data;
+};
+
+export const getUserFeedbackById = async (id: string): Promise<FeedbackResponseData> => {
+  const response = await api.get(`/user/feedback/${id}`);
+  return response.data;
+};
+
+export const submitInterviewerRating = async (data: SubmitInterviewerRatingData): Promise<SubmitInterviewerRatingData> => {
+  const response = await api.post('/user/rating', data);
+  return response.data;
+}
+
+export const getInterviewerRatingByBooking = async (bookingId: string) => {
+  const response = await api.get(`/user/rating/${bookingId}`)
+  return response.data
+}
+
+export const getUserPaymentHistory = async (): Promise<PaymentHistoryResponse> => {
+  const response = await api.get('/user/payments/history')
+  return response.data
+}
+
+export const getUserDashboard = async (): Promise<UserDashboardResponse> => {
+  const response = await api.get('/user/dashboard')
+  return response.data
+}
+
+export const changeUserPassword = async (data:ChangePasswordData) => {
+  const response = await api.put('/user/change-password', data)
+  return response.data
+}
+
+export const deleteUserAccount = async () => {
+  const response = await api.delete('/user/delete')
+  return response.data
+}

@@ -8,6 +8,8 @@ import { Wallet as WalletIcon, TrendingUp, DollarSign, Plus, Calendar, CreditCar
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { useInterviewerWallet } from "@/hooks/useInterviewerWallet";
 import { WalletTransaction } from "../../../types/wallet.types";
+import { useState, useMemo } from "react";
+import Paginator from "../../../components/ui/paginator";
 
 const getUserName = (transaction: WalletTransaction): string => {
  return transaction.userName || `User ${transaction.userId?.slice(-4) || 'Unknown'}`
@@ -21,8 +23,18 @@ const formatDateTime = (dateString: string) => {
   };
 };
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2
+  }).format(amount)
+}
+
 const Wallet = () => {
   const { summary, transactions, loading, error } = useInterviewerWallet()
+  const [page, setPage] = useState(1)
+  const pageSize = 6
   const totalEarning = transactions
     .filter(tnx => tnx.type === 'credit')
     .reduce((sum, tnx) => sum + (tnx.interviewerFee || 0), 0);
@@ -31,6 +43,11 @@ const Wallet = () => {
     .reduce((sum, tnx) => sum + (tnx.interviewerFee || 0), 0);
   const totalCredits = transactions.filter(tnx => tnx.type === 'credit').reduce((s, t) => s + t.amount, 0);
   const totalDebits = transactions.filter(tnx => tnx.type === 'debit').reduce((s, t) => s + t.amount, 0);
+
+  const pagedTransactions = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return transactions.slice(start, start + pageSize)
+  }, [transactions, page])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] relative">
@@ -59,7 +76,7 @@ const Wallet = () => {
                   </div>
                 </div>
                 <div className="text-4xl md:text-5xl font-bold text-gradient-static mb-2">
-                  ₹{totalEarning.toLocaleString()}
+                  {loading ? "—" : formatCurrency(totalEarning)}
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-green-400" />
@@ -140,7 +157,7 @@ const Wallet = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.map((transaction, index) => {
+                  pagedTransactions.map((transaction, index) => {
                     const userName = getUserName(transaction);
                     const { date, time } = formatDateTime(transaction.createdAt);
 
@@ -152,7 +169,7 @@ const Wallet = () => {
                         <TableCell className="font-semibold py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-sm font-bold text-purple-400">
-                              {index + 1}
+                            {((page - 1) * pageSize) + index + 1}
                             </div>
                           </div>
                         </TableCell>
@@ -220,6 +237,17 @@ const Wallet = () => {
             </Table>
           </div>
         </div>
+        {/* Pagination */}
+          {!loading && transactions.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <Paginator
+                page={page}
+                totalItems={transactions.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
       </main>
     </div>
   );

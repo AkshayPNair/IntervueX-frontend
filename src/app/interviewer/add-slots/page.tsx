@@ -20,20 +20,27 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useSlotRule } from "../../../hooks/useSlotRule";
-import { DaySlotRule } from "../../../types/slotRule.types";
+import { DaySlotRule,ExcludedTimeSlot } from "../../../types/slotRule.types";
 
 const AddSlots = () => {
   const [selectedDay, setSelectedDay] = useState(0);
   const [newBlockedDate, setNewBlockedDate] = useState<string>("");
 
+  const [excludeDate, setExcludeDate] = useState<string>("");
+  const [excludeStart, setExcludeStart] = useState<string>("");
+  const [excludeEnd, setExcludeEnd] = useState<string>("");
+
   const {
     slotRules,
     blockedDates,
+    excludedSlotsByDate,
     loading,
     saving,
     updateSlotRule,
     addBlockedDate,
     removeBlockedDate,
+    addExcludedSlot,
+    removeExcludedSlot,
     saveSlotRules,
     resetSlotRules,
     activeDaysCount,
@@ -284,6 +291,54 @@ return (
               <p className="text-purple-300">No blocked dates added</p>
             )}
           </div>
+
+          {/* Per-Date Excluded Slots */}
+          <div className="mt-10">
+            <h3 className="text-xl font-bold text-gradient-static mb-4">Exclude Slots on a Specific Date</h3>
+            <div className="grid md:grid-cols-4 gap-4 mb-4">
+              <Input
+                type="date"
+                value={excludeDate}
+               onChange={(e) => setExcludeDate(e.target.value)}
+                className="glass-effect border-purple-500/30 text-white h-12 rounded-xl"
+              />
+              <Input
+                type="time"
+               value={excludeStart}
+                onChange={(e) => setExcludeStart(e.target.value)}
+               className="glass-effect border-purple-500/30 text-white h-12 rounded-xl"
+                placeholder="Start"
+              />
+              <Input
+                type="time"
+                value={excludeEnd}
+                onChange={(e) => setExcludeEnd(e.target.value)}
+                className="glass-effect border-purple-500/30 text-white h-12 rounded-xl"
+                placeholder="End"
+              />
+              <Button onClick={() => {
+                if (!excludeDate || !excludeStart || !excludeEnd) return;
+                const ok = addExcludedSlot(excludeDate, { startTime: excludeStart, endTime: excludeEnd });
+                if (ok) { setExcludeDate(""); setExcludeStart(""); setExcludeEnd(""); }
+              }}>Add</Button>
+            </div>
+          </div>
+
+          {/* All Excluded Slots (always visible) */}
+          {Object.keys(excludedSlotsByDate).length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {Object.entries(excludedSlotsByDate).map(([date, slots]) => (
+                slots.map((s, idx) => (
+                  <Badge key={`${date}-${s.startTime}-${s.endTime}-${idx}`} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 flex items-center gap-2">
+                    Date: {date} ST: {s.startTime} ET: {s.endTime}
+                    <X className="w-4 h-4 cursor-pointer" onClick={() => removeExcludedSlot(date, s)} />
+                  </Badge>
+                ))
+              ))}
+            </div>
+          ) : (
+            <p className="text-purple-300 mt-2">No excluded slots added yet</p>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 pt-8">

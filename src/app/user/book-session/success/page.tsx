@@ -88,14 +88,14 @@ export default function BookingSuccessPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    onClick={() => router.push("/user/sessions")}
+                    onClick={() => router.replace("/user/sessions")}
                     className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58]"
                   >
                     View My Sessions
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => router.push("/user/dashboard")}
+                    onClick={() => router.replace("/user/dashboard")}
                     className="w-full border-[#30363D] text-[#E6EDF3]"
                   >
                     Go to Dashboard

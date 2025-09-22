@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FloatingMascot } from "@/components/ui/floating-mascot"
 import { getAllInterviewers, InterviewerProfile } from "../../../services/userService"
+import Paginator from "../../../components/ui/paginator"
 import { toast } from 'sonner'
 import {
   Search,
@@ -119,18 +120,26 @@ export default function InterviewersPage() {
     return true
   }
 
-  const filteredInterviewers = interviewers
-    .filter(applyFilters)
-    .filter(interviewer => {
-      const query = searchQuery.toLowerCase()
-      return (
+  const filteredInterviewers = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return interviewers
+      .filter(applyFilters)
+      .filter(interviewer => (
         interviewer.name.toLowerCase().includes(query) ||
         interviewer.jobTitle?.toLowerCase().includes(query) ||
-        interviewer.technicalSkills?.some(skill => 
-          skill.toLowerCase().includes(query)
-        )
-      )
-    })
+        interviewer.technicalSkills?.some(skill => skill.toLowerCase().includes(query))
+      ));
+  }, [interviewers, searchQuery, filters]);
+
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
+
+  useEffect(() => { setPage(1); }, [searchQuery, filters, interviewers]);
+  const totalItems = filteredInterviewers.length;
+  const pagedInterviewers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredInterviewers.slice(start, start + pageSize);
+  }, [filteredInterviewers, page]);
 
   const clearFilters = () => {
     
@@ -385,93 +394,103 @@ export default function InterviewersPage() {
                 )}
               </div>  
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredInterviewers.map((interviewer, index) => (
-                  <motion.div
-                    key={interviewer.id}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02, y: -5 }}
-                  >
-                    <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300 h-full">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="w-12 h-12">
-                              {interviewer.profilePicture ? (
-                                <AvatarImage src={interviewer.profilePicture} alt={interviewer.name} />
-                              ) : (
-                                <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold">
-                                  {interviewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
-                            <div>
-                              <h3 className="text-[#E6EDF3] font-bold">{interviewer.name}</h3>
-                              <p className="text-[#BC8CFF] text-sm font-medium">{interviewer.jobTitle}</p>
+              <>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pagedInterviewers.map((interviewer, index) => (
+                    <motion.div
+                      key={interviewer.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      whileHover={{ scale: 1.02, y: -5 }}
+                    >
+                      <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300 h-full">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="w-12 h-12">
+                                {interviewer.profilePicture ? (
+                                  <AvatarImage src={interviewer.profilePicture} alt={interviewer.name} />
+                                ) : (
+                                  <AvatarFallback className="bg-gradient-to-br from-[#BC8CFF] to-[#3B0A58] text-white font-bold">
+                                    {interviewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div>
+                                <h3 className="text-[#E6EDF3] font-bold">{interviewer.name}</h3>
+                                <p className="text-[#BC8CFF] text-sm font-medium">{interviewer.jobTitle}</p>
+                              </div>
                             </div>
+                            <Badge className="bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/30">
+                              Available
+                            </Badge>
                           </div>
-                          <Badge className="bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/30">
-                            Available
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-4 h-4 fill-[#3FB950] text-[#3FB950]" />
-                            <span className="text-[#E6EDF3] font-semibold">{interviewer.rating || 4.5}</span>
-                            <span className="text-[#7D8590] text-sm">(25 reviews)</span>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 fill-[#3FB950] text-[#3FB950]" />
+                              <span className="text-[#E6EDF3] font-semibold">{interviewer.rating || 4.5}</span>
+                              <span className="text-[#7D8590] text-sm">(25 reviews)</span>
+                            </div>
+                            <div className="text-[#BC8CFF] font-semibold">₹ {interviewer.hourlyRate}/hr</div>
                           </div>
-                          <div className="text-[#BC8CFF] font-semibold">₹ {interviewer.hourlyRate}/hr</div>
-                        </div>
-                        <div>
-                          {/* Experience */}
-                          <div className="text-[#7D8590] text-sm">
-                            {interviewer.yearsOfExperience ? `${interviewer.yearsOfExperience} years experience` : '8 years experience'}
-                          </div>
-
                           <div>
-                            <div className="flex flex-wrap gap-1 mt-2 ">
-                              {interviewer.technicalSkills?.slice(0, 3).map((skill, i) => (
-                                <Badge key={i} variant="outline" className="border-[#58A6FF] text-[#58A6FF] text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
+                            {/* Experience */}
+                            <div className="text-[#7D8590] text-sm">
+                              {interviewer.yearsOfExperience ? `${interviewer.yearsOfExperience} years experience` : '8 years experience'}
                             </div>
+
+                            <div>
+                              <div className="flex flex-wrap gap-1 mt-2 ">
+                                {interviewer.technicalSkills?.slice(0, 3).map((skill, i) => (
+                                  <Badge key={i} variant="outline" className="border-[#58A6FF] text-[#58A6FF] text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
                           </div>
 
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 border-[#7D8590] text-[#7D8590] hover:bg-[#30363D]/50 bg-transparent"
-                            onClick={() => {
-                              setSelectedInterviewer(interviewer)
-                              router.push(`/user/interviewers/${interviewer.id}`)
-                            }}
-                          >
-                            View Profile
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80"
-                            onClick={() => {
-                              setSelectedInterviewer(interviewer)
-                              router.push(`/user/book-session/${interviewer.id}`)
-                            }}
-                          >
-                            Book Session
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 border-[#7D8590] text-[#7D8590] hover:bg-[#30363D]/50 bg-transparent"
+                              onClick={() => {
+                                setSelectedInterviewer(interviewer)
+                                router.push(`/user/interviewers/${interviewer.id}`)
+                              }}
+                            >
+                              View Profile
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80"
+                              onClick={() => {
+                                setSelectedInterviewer(interviewer)
+                                router.push(`/user/book-session/${interviewer.id}`)
+                              }}
+                            >
+                              Book Session
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <Paginator 
+                    page={page} 
+                    totalItems={totalItems} 
+                    onPageChange={setPage} 
+                    pageSize={pageSize} 
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

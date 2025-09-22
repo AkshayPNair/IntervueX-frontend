@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback,AvatarImage } from "@/components/ui/avatar"
 import { Navigation } from "@/components/navigation"
 import { FloatingMascot } from "@/components/ui/floating-mascot"
+import { startOrGetConversation } from "../../../../services/chatService"
 import { getInterviewerById,InterviewerProfile } from "../../../../services/userService"
 import {toast} from 'sonner'
 import {  
@@ -229,16 +230,34 @@ export default function InterviewerProfilePage() {
               <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
                 <CardContent className="p-6 text-center">
                 <div className="w-16 h-16 bg-gradient-to-br from-[#BC8CFF]/20 to-[#3B0A58]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-+                    <Zap className="w-8 h-8 text-[#BC8CFF]" />
-+                  </div>
-                  <h3 className="text-[#E6EDF3] font-semibold text-lg mb-2">Quick Book</h3>
-                  <p className="text-[#7D8590] text-sm mb-4">Book a session with {selectedInterviewer.name}</p>
-                  <Button
-                    onClick={() => router.push(`/user/book-session/${selectedInterviewer.id}`)}
-                    className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80 text-white font-medium transition-all duration-300"
-                  >
-                    Book Session
-                  </Button>
+                    <Zap className="w-8 h-8 text-[#BC8CFF]" />
+                  </div>
+                  <h3 className="text-[#E6EDF3] font-semibold text-lg mb-2">Quick Actions</h3>
+                  <p className="text-[#7D8590] text-sm mb-4">Reach out or book a session with {selectedInterviewer.name}</p>
+                  <div className="grid gap-3">
+                    <Button
+                      onClick={() => router.push(`/user/book-session/${selectedInterviewer.id}`)}
+                      className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80 text-white font-medium transition-all duration-300"
+                    >
+                      Book Session
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const conv = await startOrGetConversation(selectedInterviewer.id)
+                          // Navigate to user chat and select this conversation via query string
+                          router.push(`/user/chat?conv=${conv.id}`)
+                        } catch (err) {
+                          console.error('Failed to start chat', err)
+                          toast.error('Failed to start chat')
+                        }
+                      }}
+                      className="w-full border-[#BC8CFF] text-[#BC8CFF] hover:bg-[#BC8CFF]/10"
+                    >
+                      Start Chat
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

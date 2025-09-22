@@ -1,21 +1,23 @@
 "use client"
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Video, Users, Clock, Calendar, User, Briefcase, MapPin, Star, Play, Mail, Phone, Eye } from "lucide-react";
+import { Search, Video, Users, Clock, Calendar,X,AlertTriangle , User, Briefcase, MapPin, Star, Play, Mail, Phone, Eye, MessageSquare } from "lucide-react";
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { useInterviewerBookings } from "@/hooks/useInterviewerBookings";
+import { useUserRatingByBookingId } from "@/hooks/useUserRatingByBookingId";
 import { BookingStatus, InterviewerBooking } from "@/types/booking.types";
+import Paginator from "../../../components/ui/paginator";
 
 const Sessions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("upcoming");
   const { bookings, loading, error } = useInterviewerBookings()
 
-  const filteredSessions = bookings.filter(session => {
+  const filteredSessions = useMemo(() => bookings.filter(session => {
     const matchesSearch = session.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesTab = activeTab === "upcoming" ? session.status === BookingStatus.CONFIRMED :
@@ -23,13 +25,138 @@ const Sessions = () => {
         activeTab === "cancelled" ? session.status === BookingStatus.CANCELLED :
           true;
     return matchesSearch && matchesTab;
-  });
+ }), [bookings, searchTerm, activeTab]);
 
-  const upcomingSessions = filteredSessions.filter(booking => booking.status === BookingStatus.CONFIRMED);
-  const completedSessions = filteredSessions.filter(booking => booking.status === BookingStatus.COMPLETED);
-  const cancelledSessions = filteredSessions.filter(booking => booking.status === BookingStatus.CANCELLED);
+  const upcomingSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.CONFIRMED), [filteredSessions]);
+  const completedSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.COMPLETED), [filteredSessions]);
+  const cancelledSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.CANCELLED), [filteredSessions]);
+
+  const pageSize = 6;
+  const [pageUpcoming, setPageUpcoming] = useState(1);
+  const [pageCompleted, setPageCompleted] = useState(1);
+  const [pageCancelled, setPageCancelled] = useState(1);
+
+  const pagedUpcoming = useMemo(() => {
+    const start = (pageUpcoming - 1) * pageSize;
+    return upcomingSessions.slice(start, start + pageSize);
+  }, [upcomingSessions, pageUpcoming]);
+
+  const pagedCompleted = useMemo(() => {
+    const start = (pageCompleted - 1) * pageSize;
+    return completedSessions.slice(start, start + pageSize);
+  }, [completedSessions, pageCompleted]);
+
+  const pagedCancelled = useMemo(() => {
+    const start = (pageCancelled - 1) * pageSize;
+    return cancelledSessions.slice(start, start + pageSize);
+  }, [cancelledSessions, pageCancelled]);
+
+   const displayedSessions = useMemo(() => {
+    if (activeTab === "upcoming") return pagedUpcoming;
+    if (activeTab === "completed") return pagedCompleted;
+    if (activeTab === "cancelled") return pagedCancelled;
+    return filteredSessions;
+  }, [activeTab, pagedUpcoming, pagedCompleted, pagedCancelled, filteredSessions]);
+
+  const InterviewerBookingRating = ({ bookingId }: { bookingId: string }) => {
+    const { data, loading } = useUserRatingByBookingId(bookingId)
+    const rating = data?.rating ?? 0
+    if (loading) return <span className="text-xs text-purple-300">Loading...</span>
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          {[1,2,3,4,5].map(star => (
+            <Star key={star} className={`w-4 h-4 ${star <= rating ? 'fill-[#3FB950] text-[#3FB950]' : 'text-[#30363D]'}`} />
+          ))}
+        </div>
+        <span className="text-xs text-[#7D8590]">{rating}/5</span>
+        {data?.comment && (
+          <span className="text-xs text-purple-300 truncate max-w-[160px]" title={data.comment}>{data.comment}</span>
+        )}
+      </div>
+    )
+  }
+
+  const ReviewModal = ({ booking, onClose }: { booking: InterviewerBooking, onClose: () => void }) => {
+    const { data, loading, error } = useUserRatingByBookingId(booking?.id)
+    const rating = data?.rating ?? 0
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="card-futuristic max-w-lg w-full p-6 sm:p-8 rounded-2xl bg-gray-900/50 border border-purple-500/30 shadow-2xl shadow-purple-500/10">
+              <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-semibold text-gradient-static">User Feedback</h2>
+                  <button
+                      onClick={onClose}
+                      className="glass-effect rounded-full p-2 text-gray-400 hover:text-white hover:bg-purple-500/20 transition-all duration-200"
+                      aria-label="Close modal"
+                  >
+                      <X size={20} />
+                  </button>
+              </div>
+  
+              {loading ? (
+                  // Simple loading message
+                  <div className="flex justify-center items-center py-16">
+                      <p className="text-purple-300 text-lg">Loading Feedback...</p>
+                  </div>
+              ) : error ? (
+                  <div className="flex flex-col items-center justify-center text-center p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
+                      <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+                      <h3 className="font-semibold text-red-300">Could not load rating</h3>
+                      <p className="text-sm text-red-400/80">{error}</p>
+                  </div>
+              ) : data ? (
+                  <div className="space-y-6">
+                      {/* ===== RATING SECTION (MODIFIED) ===== */}
+                      <div className="flex flex-col items-center space-y-3">
+                          <h3 className="text-sm font-medium text-purple-300 tracking-wider">RATING</h3>
+                          <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                  {[1, 2, 3, 4, 5].map(star => (
+                                      <Star key={star} className={`w-8 h-8 transition-colors ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}`} />
+                                  ))}
+                              </div>
+                              <span className="text-xl font-bold text-white">{rating} / 5</span>
+                          </div>
+                      </div>
+                    
+                      {/* Separator */}
+                      <hr className="border-t border-purple-400/20" />
+  
+                      {/* Comment Section */}
+                      <div className="space-y-3">
+                          <div className="flex items-center space-x-2 text-purple-300">
+                              <MessageSquare size={18} />
+                              <h3 className="text-sm font-medium tracking-wider">COMMENT</h3>
+                          </div>
+                          {data.comment ? (
+                              <blockquote className="border-l-4 border-purple-400/50 pl-4 py-2 bg-gray-800/30 rounded-r-lg">
+                                  <p className="text-base text-gray-300 whitespace-pre-wrap italic">
+                                      "{data.comment}"
+                                  </p>
+                              </blockquote>
+                          ) : (
+                              <p className="text-sm text-gray-500 italic pl-4">No comment was provided.</p>
+                          )}
+                      </div>
+                  </div>
+              ) : null}
+          </div>
+      </div>
+  )
+  } 
+
+  const currentPage = activeTab === "upcoming" ? pageUpcoming :
+    activeTab === "completed" ? pageCompleted :
+    activeTab === "cancelled" ? pageCancelled : 1;
+
+  const totalItems = activeTab === "upcoming" ? upcomingSessions.length :
+    activeTab === "completed" ? completedSessions.length :
+    activeTab === "cancelled" ? cancelledSessions.length : filteredSessions.length;
 
   const [selectedCandidate, setSelectedCandidate] = useState<InterviewerBooking | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<InterviewerBooking | null>(null);
 
   const CandidateProfile = ({ candidate, onClose }: { candidate: InterviewerBooking; onClose: () => void }) => (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -172,7 +299,7 @@ const Sessions = () => {
         {/* Tab Buttons */}
         <div className="flex justify-center mb-8 space-x-4">
           <Button
-            onClick={() => setActiveTab("upcoming")}
+             onClick={() => { setActiveTab("upcoming"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
             className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "upcoming"
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
@@ -181,7 +308,7 @@ const Sessions = () => {
             Upcoming 
           </Button>
           <Button
-            onClick={() => setActiveTab("completed")}
+            onClick={() => { setActiveTab("completed"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
             className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "completed"
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
@@ -190,7 +317,7 @@ const Sessions = () => {
             Completed 
           </Button>
           <Button
-            onClick={() => setActiveTab("cancelled")}
+            onClick={() => { setActiveTab("cancelled"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
             className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "cancelled"
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
@@ -228,7 +355,7 @@ const Sessions = () => {
         {/* Sessions Grid */}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredSessions.map((session, index) => (
+            {displayedSessions.map((session, index) => (
               <div
                 key={session.id}
                 className="card-futuristic hover-glow p-6 animate-fade-in rounded-2xl"
@@ -285,7 +412,7 @@ const Sessions = () => {
 
                 {/* STatus info */}
                 {session.status === BookingStatus.COMPLETED && (
-                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="flex items-center space-x-2 mb-4">
                     <span className="text-green-400 text-sm">✓ Interview Completed</span>
                     </div>
               )}
@@ -305,12 +432,21 @@ const Sessions = () => {
                       </Link>
                     </Button>
                   ) : session.status === BookingStatus.COMPLETED ? (
-                    <Button size="sm" asChild className="flex-1 glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 text-xs">
-                      <Link href={`/interviewer/feedback/${session.id}`}>
-                        <Eye className="w-4 h-4 mr-1" />
-                        Feedback
-                      </Link>
-                    </Button>
+                     <>
+                      <Button size="sm" asChild className="flex-1 glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 text-xs">
+                        <Link href={`/interviewer/feedback`}>
+                          <MessageSquare className="w-4 h-4 mr-1" />
+                          Feedback
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => { setSelectedBookingForReview(session); setReviewModalOpen(true); }}
+                        className="flex-1 glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 text-xs"
+                      >
+                        Review
+                      </Button>
+                    </>
                   ):null}
                   <Button
                     size="sm"
@@ -321,6 +457,7 @@ const Sessions = () => {
                     <User className="w-4 h-4 mr-1" />
                     Details
                   </Button>
+                  
                 </div>
               </div>
             ))}
@@ -335,11 +472,35 @@ const Sessions = () => {
           </div>
         )}
 
+         {/* Pagination */}
+        {!loading && !error && totalItems > 0 && (
+          <div className="mt-8 flex justify-center">
+            <Paginator
+              page={currentPage}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={(p) => {
+                if (activeTab === "upcoming") setPageUpcoming(p);
+                else if (activeTab === "completed") setPageCompleted(p);
+                else if (activeTab === "cancelled") setPageCancelled(p);
+              }}
+            />
+          </div>
+        )}
+
         {/* Candidate Profile Modal */}
         {selectedCandidate && (
           <CandidateProfile
             candidate={selectedCandidate}
             onClose={() => setSelectedCandidate(null)}
+          />
+        )}
+
+        {/* Review Modal */}
+        {reviewModalOpen && selectedBookingForReview && (
+          <ReviewModal
+            booking={selectedBookingForReview}
+            onClose={() => { setReviewModalOpen(false); setSelectedBookingForReview(null); }}
           />
         )}
       </main>

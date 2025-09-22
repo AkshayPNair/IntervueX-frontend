@@ -13,7 +13,6 @@ import { ArrowLeft, Mail, Clock } from "lucide-react"
 import api from '../../../services/api'
 import { toast } from 'sonner'
 
-
 export default function OTPPage() {
   const router = useRouter()
   const searchParams = useSearchParams()

@@ -78,3 +78,13 @@ export interface CancelBookingData{
 export interface CompleteBookingData{
     bookingId:string
 }
+
+export interface AdminBookingList {
+  id: string;
+  userName: string;
+  interviewerName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+}

@@ -84,7 +84,7 @@ export default function BookSessionPage() {
 
         setIsLeaving(true)
         setTimeout(() => {
-          router.push(`/user/book-session/success?${qs}`)
+          router.replace(`/user/book-session/success?${qs}`)
         }, 400)
       }
     } catch (err: any) {

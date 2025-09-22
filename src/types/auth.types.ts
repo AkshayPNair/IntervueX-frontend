@@ -94,3 +94,8 @@ export interface GoogleUserInfo {
     email: string;
     email_verified: boolean;
 }
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
