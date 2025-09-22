@@ -1,6 +1,6 @@
 "use client"; 
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, MessageSquare, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export default function ChatPage() {
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return conversations.filter((c: Conversation) =>
-      (c.userId + c.interviewerId + (c.lastMessage || "")).toLowerCase().includes(q)
+      ((c.interviewerName || "") + (c.userName || "") + c.userId + c.interviewerId + (c.lastMessage || "")).toLowerCase().includes(q)
     );
   }, [conversations, searchQuery]);
 
@@ -41,15 +41,26 @@ export default function ChatPage() {
     () => conversations.find((c) => c.id === selectedConversationId) || null,
   [conversations, selectedConversationId]);
 
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    // scroll on conversation change and on new messages
+    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [selectedConversationId, messages])
+
   const handleSend = async () => {
     if (!draft.trim() || !current) return;
-    // As a user, recipient is interviewerId
     await send(current.interviewerId, draft.trim());
     setDraft("");
+    // ensure scroll after sending
+    requestAnimationFrame(() => {
+      if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    })
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58]">
+    <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] pt-20">
       
       
       <div className="flex h-[calc(100vh-80px)]">
@@ -90,28 +101,18 @@ export default function ChatPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={undefined} alt={conversation.interviewerId} />
+                      <AvatarImage src={undefined} alt={conversation.interviewerName || conversation.interviewerId} />
                         <AvatarFallback className="bg-gradient-to-br from-purple-600 to-purple-800 text-white font-semibold">
-                          {conversation.interviewerId?.charAt(0) ?? "I"}
+                        {(conversation.interviewerName || conversation.interviewerId)?.charAt(0) ?? "I"}
                         </AvatarFallback>
                       </Avatar>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-white truncate">{conversation.interviewerId}</h3>
+                      <h3 className="font-medium text-white truncate">{conversation.interviewerName || conversation.interviewerId}</h3>
                         <span className="text-xs text-gray-400">
                           {new Date(conversation.updatedAt).toLocaleTimeString()}
                         </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-400 truncate">
-                          {conversation.lastMessage || "No messages yet"}
-                        </p>
-                        {conversation.unreadForUser ? (
-                          <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
-                            {conversation.unreadForUser}
-                          </Badge>
-                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -131,11 +132,11 @@ export default function ChatPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarFallback className="bg-gradient-to-br from-purple-600 to-purple-800 text-white">
-                      {current.interviewerId?.charAt(0) ?? "I"}
+                      {(current.interviewerName || current.interviewerId)?.charAt(0) ?? "I"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h2 className="font-semibold text-white">{current.interviewerId}</h2>
+                    <h2 className="font-semibold text-white">{current.interviewerName || current.interviewerId}</h2>
                       <p className="text-sm text-purple-300">{peerTyping ? 'is typing…' : 'Conversation'}</p>
                     </div>
                   </div>
@@ -146,7 +147,7 @@ export default function ChatPage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-3">
+              <div className="flex-1 p-6 overflow-y-auto space-y-3 custom-scrollbar" id="chat-scroll-container" ref={listRef}>
               {messages.map((m) => {
                   const isSelf = m.senderId === (current?.userId) // user is viewing, so self is userId
                   return (
@@ -160,6 +161,7 @@ export default function ChatPage() {
                     </div>
                     )
                 })}
+                <div id="chat-bottom-anchor" ref={bottomRef} />
               </div>
 
               {/* Message Input */}
@@ -171,6 +173,12 @@ export default function ChatPage() {
                     onChange={(e) => {
                       setDraft(e.target.value)
                       if (e.target.value.trim()) startTyping(); else stopTyping();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
                     }}
                     onBlur={stopTyping}
                     className="flex-1 bg-white/5 border-purple-400/20 text-white placeholder:text-gray-400 focus:border-purple-400/50"

@@ -1,6 +1,6 @@
 "use client"; 
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, MessageSquare, MoreVertical, Badge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export default function ChatPage() {
  const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return conversations.filter((c: Conversation) =>
-      (c.userId + c.interviewerId + (c.lastMessage || "")).toLowerCase().includes(q)
+      ((c.userName || "") + (c.interviewerName || "") + c.userId + c.interviewerId + (c.lastMessage || "")).toLowerCase().includes(q)
     );
   }, [conversations, searchQuery]);
 
@@ -40,17 +40,25 @@ export default function ChatPage() {
     [conversations, selectedConversationId]
   );
 
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [selectedConversationId, messages])
+
   const handleSend = async () => {
     if (!draft.trim() || !current) return;
     // As an interviewer, recipient is userId
     await send(current.userId, draft.trim());
     setDraft("");
+    requestAnimationFrame(() => {
+      if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    })
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] ">
-      
-      
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] ">
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar */}
         <div className="w-80 bg-black/20 backdrop-blur-xl border-r border-purple-400/20">
@@ -74,7 +82,7 @@ export default function ChatPage() {
           </div>
 
           {/* Chat List */}
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto ">
             {loading ? (
               <div className="p-4 text-gray-400">Loading...</div>
             ) : (
@@ -89,29 +97,20 @@ export default function ChatPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={undefined} alt={conversation.userId} />
+                      <AvatarImage src={undefined} alt={conversation.userName || conversation.userId} />
                         <AvatarFallback className="bg-gradient-to-br from-purple-600 to-purple-800 text-white font-semibold">
-                          {conversation.userId?.charAt(0) ?? "U"}
+                        {(conversation.userName || conversation.userId)?.charAt(0) ?? "U"}
                         </AvatarFallback>
                       </Avatar>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-white truncate">{conversation.userId}</h3>
+                      <h3 className="font-medium text-white truncate">{conversation.userName || conversation.userId}</h3>
                         <span className="text-xs text-gray-400">
                           {new Date(conversation.updatedAt).toLocaleTimeString()}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-400 truncate">
-                          {conversation.lastMessage || "No messages yet"}
-                        </p>
-                        {conversation.unreadForInterviewer ? (
-                          <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
-                            {conversation.unreadForInterviewer}
-                          </Badge>
-                        ) : null}
-                      </div>
+                      
                     </div>
                   </div>
                 </div>
@@ -130,11 +129,11 @@ export default function ChatPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarFallback className="bg-gradient-to-br from-purple-600 to-purple-800 text-white">
-                      {current.userId?.charAt(0) ?? "U"}
+                      {(current.userName || current.userId)?.charAt(0) ?? "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                     <h2 className="font-semibold text-white">{current.userId}</h2>
+                    <h2 className="font-semibold text-white">{current.userName || current.userId}</h2>
                      <p className="text-sm text-purple-300">{peerTyping ? 'is typing…' : 'Conversation'}</p>
                     </div>
                   </div>
@@ -145,9 +144,9 @@ export default function ChatPage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-3">
+              <div className="flex-1 p-6 overflow-y-auto space-y-3 custom-scrollbar" ref={listRef}>
               {messages.map((m) => {
-                  const isSelf = m.senderId === (current?.interviewerId) // interviewer is viewing, so self is interviewerId
+                  const isSelf = m.senderId === (current?.interviewerId)
                   return (
                     <div key={m.id} className={`text-white flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}>
                       <div className="text-xs text-gray-400">
@@ -159,6 +158,7 @@ export default function ChatPage() {
                     </div>
                   )
                 })}
+                <div ref={bottomRef} />
               </div>
 
               {/* Message Input */}
@@ -170,6 +170,12 @@ export default function ChatPage() {
                     onChange={(e) => {
                       setDraft(e.target.value)
                       if (e.target.value.trim()) startTyping(); else stopTyping();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
                     }}
                     onBlur={stopTyping}
                     className="flex-1 bg-white/5 border-purple-400/20 text-white placeholder:text-gray-400 focus:border-purple-400/50"

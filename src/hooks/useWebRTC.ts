@@ -106,12 +106,17 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
       try {
         const payload = JSON.parse(e.data);
         if (payload?.type === 'chat') {
-          setMessages((prev) => [...prev, { 
+          setMessages((prev) => [...prev, 
+            { 
             id: crypto.randomUUID(), 
             text: payload.text, 
             self: false,
             ts: typeof payload.ts === 'number' ? payload.ts : Date.now(), 
-          }]);     
+          },
+        ]);     
+        }else{
+          // forward other control messages to listeners
+          signalListenersRef.current.forEach((fn) => fn(payload));
         }
       } catch (err) {
         console.warn('[webrtc] failed to parse data channel message:', err);
@@ -388,6 +393,30 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
     }
   }, []);
 
+  // Custom control signaling helpers
+  type DataMessage =
+    | { type: 'chat'; text: string; ts?: number }
+    | { type: 'compiler:toggle'; open: boolean }
+    | { type: 'compiler:tab'; tab: 'editor' | 'output' }
+    | { type: string; [k: string]: any };
+    
+
+  const signalListenersRef = useRef<((msg: DataMessage) => void)[]>([]);
+
+  const onSignal = useCallback((cb: (msg: DataMessage) => void) => {
+    signalListenersRef.current.push(cb);
+    return () => {
+      signalListenersRef.current = signalListenersRef.current.filter((f) => f !== cb);
+    };
+  }, []);
+
+  const sendSignal = useCallback((msg: DataMessage) => {
+    const dc = dataChannelRef.current;
+    if (dc && dc.readyState === 'open') {
+      dc.send(JSON.stringify(msg));
+    }
+  }, []);
+
   return {
     localVideoRef,
     remoteVideoRef,
@@ -397,6 +426,8 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
     toggleAudio,
     connectedPeer,
     remoteJoined,
-    remoteVideoOn,  
+    remoteVideoOn,
+    onSignal,
+    sendSignal  
   };
 }

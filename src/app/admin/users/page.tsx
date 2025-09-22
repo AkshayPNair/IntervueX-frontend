@@ -163,15 +163,6 @@ export default function UserManagement() {
       ),
     },
     {
-      key: 'sessions',
-      header: 'Sessions',
-      render: (user) => (
-        <span className="bg-purple-700/30 text-purple-200 px-2 py-1 rounded-lg shadow-sm">
-          {user.totalSessions}
-        </span>
-      ),
-    },
-    {
       key: 'actions',
       header: 'Actions',
       render: (user) => (

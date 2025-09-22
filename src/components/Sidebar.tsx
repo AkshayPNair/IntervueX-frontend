@@ -29,9 +29,6 @@ const navigation = [
   { name: 'Session Monitor', href: '/admin/sessions', icon: Monitor },
   { name: 'Interview Requests', href: '/admin/requests', icon: UserCheck },
   {name: 'Wallet', href:'/admin/wallet',icon: Wallet},
-  { name: 'Compiler Logs', href: '/admin/compiler', icon: Code },
-  { name: 'Feedback Review', href: '/admin/feedback', icon: MessageSquare },
-  { name: 'Platform Config', href: '/admin/config', icon: Settings },
 ];
 
 export default function Sidebar() {

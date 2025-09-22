@@ -76,7 +76,7 @@ const Wallet = () => {
                   </div>
                 </div>
                 <div className="text-4xl md:text-5xl font-bold text-gradient-static mb-2">
-                  {loading ? "—" : formatCurrency(summary.balance)}
+                  {loading ? "—" : formatCurrency(totalEarning)}
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-green-400" />

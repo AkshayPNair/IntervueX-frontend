@@ -28,6 +28,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { getUserBookings, getInterviewerBookings } from '@/services/bookingService';
 import { useRouter } from 'next/navigation';
 import { useSubmitInterviewerRating } from '@/hooks/useSubmitInterviewerRating';
+import { CollaborativeEditor } from '@/components/CollaborativeEditor';
+import { useCompiler } from '@/hooks/useCompiler';
+import {judge0NameToMonaco} from '@/utils/languageMap'
 
 interface VideoCallProps {
   roomId?: string;
@@ -40,6 +43,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
   const [isCompilerOpen, setIsCompilerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [compilerTab, setCompilerTab] = useState<'editor' | 'output'>('editor');
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   
@@ -51,7 +55,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
   // Determine local user info for labels and identity
   const signalingUrl = process.env.NEXT_PUBLIC_URL || ''
-  const { localVideoRef, remoteVideoRef, toggleAudio, toggleVideo, messages: rtcMessages, sendChat, remoteJoined, remoteVideoOn } = useWebRTC(_roomId ?? 'default-room', signalingUrl)
+  const { localVideoRef, remoteVideoRef, toggleAudio, toggleVideo, messages: rtcMessages, sendChat, remoteJoined, remoteVideoOn, onSignal,sendSignal } = useWebRTC(_roomId ?? 'default-room', signalingUrl)
   const { completeSession } = useCompleteBooking()
   const router = useRouter()
 
@@ -122,36 +126,74 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         window.history.back()
       }
   }
+  // Compiler state via hook (Monaco + Judge0)
+  const { language, setLanguage, languageId, setLanguageId, languages, stdin, setStdin, code, setCode, output, setOutput, isRunning, runCode } = useCompiler();
 
-  // Compiler state
-  const [code, setCode] = useState(`// Welcome to the collaborative compiler
-function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
+  const [peerRunning, setPeerRunning] = useState(false);
 
-console.log(fibonacci(10));`);
-  const [output, setOutput] = useState('Output will appear here...');
-  const [isRunning, setIsRunning] = useState(false);
+  const runCodeAndShowOutput = async () => {
+    if (!isCompilerOpen) setIsCompilerOpen(true);
+    setCompilerTab('output');
+    sendSignal({ type: 'compiler:tab', tab: 'output' });
+    // notify peer running started
+    sendSignal({ type: 'compiler:running', running: true });
+    const text = await runCode();
+    sendSignal({ type: 'compiler:output', output: text });
+    sendSignal({ type: 'compiler:running', running: false });
+    setCompilerTab('output');
+    sendSignal({ type: 'compiler:tab', tab: 'output' });
+  };
 
   // Chat state (UI only). Messages come from WebRTC data channel.
   const [message, setMessage] = useState('');
 
   const handleCompilerToggle = () => {
-    setIsCompilerOpen(!isCompilerOpen);
+   const next = !isCompilerOpen;
+    setIsCompilerOpen(next);
+    // broadcast to peer so both see the same state
+    sendSignal({ type: 'compiler:toggle', open: next });
+    if(next){
+      sendSignal({type:'compiler:tab',tab:compilerTab})
+    }
   };
+
+  // listen for compiler toggle from peer
+  useEffect(() => {
+    const off = onSignal((msg) => {
+      if (msg.type === 'compiler:toggle') {
+        setIsCompilerOpen(!!msg.open);
+      } else if (msg.type === 'compiler:tab') {
+        if (!isCompilerOpen) setIsCompilerOpen(true);
+        setCompilerTab(msg.tab === 'output' ? 'output' : 'editor');
+      } else if (msg.type === 'compiler:output' && typeof msg.output === 'string') {
+        // ensure output tab is visible and update text
+        if (!isCompilerOpen) setIsCompilerOpen(true);
+        setCompilerTab('output');
+        setOutput(msg.output);
+      } else if (msg.type === 'compiler:running') {
+        setPeerRunning(!!msg.running);
+      } else if (msg.type === 'compiler:language') {
+        const nextId = Number(msg.languageId);
+        setLanguageId(nextId);
+        const label = typeof msg.label === 'string' ? msg.label : String(nextId);
+        setLanguage(judge0NameToMonaco(nextId, label));
+        setCode((prev) => `// Start coding together in ${label}...\n` + (prev || ''));
+      }
+    });
+    return () => { if (typeof off === 'function') off(); };
+  }, [onSignal, isCompilerOpen]);
 
   const handleChatToggle = () => {
     setIsChatOpen(!isChatOpen);
   };
 
-  const handleRunCode = () => {
-    setIsRunning(true);
-    setTimeout(() => {
-      setOutput('55\n\nExecution completed successfully.');
-      setIsRunning(false);
-    }, 1500);
-  };
+  // const handleRunCode = () => {
+  //   setIsRunning(true);
+  //   setTimeout(() => {
+  //     setOutput('55\n\nExecution completed successfully.');
+  //     setIsRunning(false);
+  //   }, 1500);
+  // };
 
   const handleSendMessage = () => {
     if (!message.trim()) return;
@@ -315,62 +357,110 @@ console.log(fibonacci(10));`);
               {/* Header */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
+                <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
+                    <div className="ml-2 inline-flex rounded-md overflow-hidden border border-border">
+                      <button
+                        className={`px-3 py-1.5 text-sm ${compilerTab === 'editor' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
+                        onClick={() => { setCompilerTab('editor'); sendSignal({ type: 'compiler:tab', tab: 'editor' }); }}
+                      >
+                        Editor
+                      </button>
+                      <button
+                        className={`px-3 py-1.5 text-sm ${compilerTab === 'output' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
+                        onClick={() => { setCompilerTab('output'); sendSignal({ type: 'compiler:tab', tab: 'output' }); }}
+                      >
+                        Output
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
                     
-                    <Button variant="control" size="sm">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </Button>
+                    
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-3">
                   <Button
                     variant="control-success"
                     size="sm"
-                    onClick={handleRunCode}
-                    disabled={isRunning}
+                    onClick={runCodeAndShowOutput}
+                    disabled={isRunning || peerRunning}
                   >
-                    {isRunning ? (
+                  {isRunning || peerRunning ? (
                       <Square className="h-4 w-4 mr-2" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
                     )}
-                    {isRunning ? 'Running...' : 'Run'}
+                    {(isRunning || peerRunning) ? 'Running...' : 'Run'}
                   </Button>
-                  <select className="bg-secondary border border-border rounded px-3 py-1 text-sm text-foreground">
-                    <option>JavaScript</option>
-                    <option>Python</option>
-                    <option>Java</option>
-                    <option>C++</option>
+                  <select
+                    className="bg-secondary border border-border rounded px-3 py-1 text-sm text-foreground"
+                    value={languageId}
+                    onChange={(e) => {
+                      const nextId = Number(e.target.value);
+                      setLanguageId(nextId);
+                     const found = languages.find(l => l.id === nextId);
+                      const label = found?.name || String(nextId);
+                      // set monaco language locally too
+                      setLanguage(judge0NameToMonaco(nextId, label));
+                      // notify peer
+                      sendSignal({ type: 'compiler:language', languageId: nextId, label });
+                      // also update starter comment locally
+                      setCode((prev) => `// Start coding together in ${label}...\n` + (prev || ''));
+                    }}
+                  >
+                    {/* options provided by useCompiler hook languages state */}
+                    {Array.isArray(languages) && languages.length > 0 ? (
+                      languages.map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value={63}>JavaScript (Node.js)</option>
+                        <option value={71}>Python (3.8+)</option>
+                        <option value={54}>C++ (GCC)</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
 
               {/* Code Editor */}
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 p-4">
-                  <textarea
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="w-full h-full bg-muted border border-border rounded-lg p-4 text-foreground font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Write your code here..."
-                    spellCheck={false}
-                  />
+                {/* Editor Section */}
+                <div className={`flex-1 p-4 ${compilerTab === 'editor' ? '' : 'hidden'}`}>
+                  <div className="w-full h-full border border-border rounded-lg overflow-hidden">
+                    <CollaborativeEditor
+                      roomId={_roomId ?? 'default-room'}
+                      initialCode={code}
+                      language={language}
+                      onChangeCode={setCode}
+                      sendSignal={sendSignal}
+                      onSignal={onSignal}
+                    />
+                  </div>
                 </div>
 
-                {/* Output Panel */}
-                <div className="h-32 border-t border-border">
-                  <div className="p-3 border-b border-border">
+                {/* Output Section */}
+                <div className={`flex-1 flex flex-col min-h-0 ${compilerTab === 'output' ? '' : 'hidden'}`}>
+                  <div className="p-3 border-t border-border">
                     <div className="flex items-center gap-2">
                       <Terminal className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium text-foreground">Console Output</span>
                     </div>
                   </div>
-                  <div className="p-4 h-20 overflow-y-auto">
+                  <div className="p-4 flex-1 overflow-y-auto">
+                    <div className="mb-2 font-semibold">Program Input (stdin)</div>
+                    <textarea
+                      value={stdin}
+                      onChange={(e) => setStdin(e.target.value)}
+                      className="w-full h-24 bg-slate-900/50 border border-border rounded p-2 mb-3 text-foreground"
+                      placeholder="Optional input to pass to the program"
+                    /> 
+                    <div className="mb-2 font-semibold">Output</div>
                     <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap">
                       {output}
-                    </pre>
+                   </pre>
                   </div>
                 </div>
               </div>

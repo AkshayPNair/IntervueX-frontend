@@ -174,7 +174,7 @@ export default function Wallet() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, duration: 0.5 }}
               >
-                {loading ? "—" : formatCurrency(summary.balance)}
+                {loading ? "—" : formatCurrency(totalEarnings)}
               </motion.p>
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <span className="text-sm text-gray-300">Total Amount: <span className="font-semibold text-white">₹{totalAmount.toLocaleString('en-IN')}</span></span>

@@ -30,3 +30,13 @@ export const rejectInterviewer = async (interviewerId: string, rejectedReason?:s
   return response.data;
 }
 
+export const getAdminDashboard = async () => {
+  const response = await api.get('/admin/dashboard');
+  return response.data;
+}
+
+export const getAdminSessions = async () => {
+  const response = await api.get('/admin/sessions');
+  return response.data; // backend now returns an array directly
+}
+

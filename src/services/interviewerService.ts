@@ -1,5 +1,7 @@
 import api from './api';
 import { FeedbackResponseData, SubmitFeedbackData} from '@/types/feedback.types';
+import { InterviewerDashboardResponse } from '@/types/dashboard.types';
+import { ChangePasswordData } from '@/types/auth.types';
 
 export interface VerificationData {
     profilePicture: File | null;
@@ -147,5 +149,20 @@ export const getFeedbackById=async(id:string):Promise<FeedbackResponseData>=>{
 
 export const getUserRatingByBooking=async(bookingId:string)=>{
     const response = await api.get(`/interviewer/rating/${bookingId}`)
+    return response.data
+}
+
+export const getInterviewerDashboard=async():Promise<InterviewerDashboardResponse>=>{
+    const response = await api.get('/interviewer/dashboard')
+    return response.data
+}
+
+export const changeInterviewerPassword = async (data: ChangePasswordData) => {
+    const response = await api.put('/interviewer/change-password', data)
+    return response.data
+}
+
+export const deleteInterviewerAccount = async () => {
+    const response = await api.delete('/interviewer/delete')
     return response.data
 }
