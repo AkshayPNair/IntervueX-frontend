@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { ArrowLeft, Mail, Clock } from "lucide-react"
 import api from '../../../services/api'
 import { toast } from 'sonner'
 
-export default function OTPPage() {
+ function OTPPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [otp, setOtp] = useState("")
@@ -410,5 +410,13 @@ export default function OTPPage() {
 
       <FloatingMascot />
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OTPPage />
+    </Suspense>
   )
 }

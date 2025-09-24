@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState , Suspense} from "react"
 import { motion } from "framer-motion"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -33,7 +33,7 @@ const Particle = ({ delay = 0 }) => (
   />
 )
 
-export default function ResetPasswordPage() {
+function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { resetPassword } = useAuth()
@@ -380,5 +380,13 @@ export default function ResetPasswordPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordPage />
+    </Suspense>
   )
 }

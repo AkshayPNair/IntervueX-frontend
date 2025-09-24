@@ -3,6 +3,7 @@ import { FeedbackResponseData, SubmitInterviewerRatingData } from '@/types/feedb
 import { UserDashboardResponse } from '@/types/dashboard.types';
 import { PaymentHistoryResponse } from '@/types/payment.types';
 import { ChangePasswordData } from '@/types/auth.types';
+import { API_ROUTES } from '../constants/apiRoutes';
 
 export interface UserProfile {
   id: string,
@@ -21,7 +22,7 @@ export interface UpdateProfileData {
 }
 
 export const getUserProfile = async (): Promise<UserProfile> => {
-  const response = await api.get('/user/profile')
+  const response = await api.get(API_ROUTES.USER.PROFILE)
   return response.data
 }
 
@@ -44,7 +45,7 @@ export const updateUserProfile = async (profileData: UpdateProfileData): Promise
     formData.append('resume', profileData.resume);
   }
 
-  const response = await api.put('/user/profile', formData, {
+  const response = await api.put(API_ROUTES.USER.UPDATE_PROFILE, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -67,51 +68,51 @@ export interface InterviewerProfile {
 }
 
 export const getAllInterviewers = async (): Promise<InterviewerProfile[]> => {
-  const response = await api.get('/user/interviewers');
-  return response.data;
+  const response = await api.get(API_ROUTES.USER.INTERVIEWERS);
+   return response.data;
 };
 
 export const getInterviewerById = async (id: string): Promise<InterviewerProfile> => {
-  const response = await api.get(`/user/interviewers/${id}`);
+  const response = await api.get(API_ROUTES.USER.INTERVIEWER_BY_ID(id));
   return response.data;
 };
 
 export const listUserFeedbacks = async (): Promise<FeedbackResponseData[]> => {
-  const response = await api.get('/user/feedback');
+  const response = await api.get(API_ROUTES.USER.FEEDBACK);
   return response.data;
 };
 
 export const getUserFeedbackById = async (id: string): Promise<FeedbackResponseData> => {
-  const response = await api.get(`/user/feedback/${id}`);
+  const response = await api.get(API_ROUTES.USER.FEEDBACK_BY_ID(id));
   return response.data;
 };
 
 export const submitInterviewerRating = async (data: SubmitInterviewerRatingData): Promise<SubmitInterviewerRatingData> => {
-  const response = await api.post('/user/rating', data);
-  return response.data;
+  const response = await api.post(API_ROUTES.USER.SUBMIT_RATING, data);
+   return response.data;
 }
 
 export const getInterviewerRatingByBooking = async (bookingId: string) => {
-  const response = await api.get(`/user/rating/${bookingId}`)
+  const response = await api.get(API_ROUTES.USER.RATING_BY_BOOKING(bookingId))
   return response.data
 }
 
 export const getUserPaymentHistory = async (): Promise<PaymentHistoryResponse> => {
-  const response = await api.get('/user/payments/history')
+  const response = await api.get(API_ROUTES.USER.PAYMENT_HISTORY)
   return response.data
 }
 
 export const getUserDashboard = async (): Promise<UserDashboardResponse> => {
-  const response = await api.get('/user/dashboard')
+  const response = await api.get(API_ROUTES.USER.DASHBOARD)
   return response.data
 }
 
 export const changeUserPassword = async (data:ChangePasswordData) => {
-  const response = await api.put('/user/change-password', data)
+  const response = await api.put(API_ROUTES.USER.CHANGE_PASSWORD, data)
   return response.data
 }
 
 export const deleteUserAccount = async () => {
-  const response = await api.delete('/user/delete')
+  const response = await api.delete(API_ROUTES.USER.DELETE_ACCOUNT)
   return response.data
 }

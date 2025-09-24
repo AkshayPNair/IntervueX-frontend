@@ -1,33 +1,34 @@
 import api from './api'
 import { CreateBookingData,PaymentMethod,Booking,RazorpayOrder, InterviewerBooking,CancelBookingData, CompleteBookingData} from '../types/booking.types'
+import { API_ROUTES } from '@/constants/apiRoutes';
 
 export const createBooking = async (bookingData: CreateBookingData): Promise<Booking> => {
-    const response = await api.post('/user/bookings', bookingData);
+    const response = await api.post(API_ROUTES.USER.CREATE_BOOKING, bookingData);
     return response.data;
 };
 
 export const cancelBooking=async(data:CancelBookingData):Promise<{message:string}>=>{
-    const response=await api.post('/user/bookings/cancel',data)
+    const response=await api.post(API_ROUTES.USER.CANCEL_BOOKING,data)
     return response.data
 }
 
 export const completeBooking=async (data:CompleteBookingData):Promise<{message:string}>=>{
-    const response=await api.post('/user/bookings/complete',data)
+    const response=await api.post(API_ROUTES.USER.COMPLETE_BOOKING,data)
     return response.data
 }
 
 export const getUserBookings = async (): Promise<Booking[]> => {
-    const response = await api.get('/user/bookings');
+    const response = await api.get(API_ROUTES.USER.BOOKINGS);
     return response.data;
 };
 
 export const createRazorpayOrder = async (amount: number): Promise<RazorpayOrder> => {
-    const response = await api.post('/user/razorpay/create-order', { amount });
+    const response = await api.post(API_ROUTES.USER.RAZORPAY_CREATE_ORDER, { amount });
     return response.data;
 };
 
 export const getInterviewerBookings=async():Promise<InterviewerBooking[]>=>{
-    const response=await api.get('/interviewer/bookings')
+    const response=await api.get(API_ROUTES.INTERVIEWER.BOOKINGS)
     return response.data
 }
 

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { API_ROUTES } from '../constants/apiRoutes';
 
 const api=axios.create({
     baseURL:process.env.NEXT_PUBLIC_BASE_URL,
@@ -25,7 +26,7 @@ api.interceptors.response.use(
             
             try {
 
-                await api.post('/auth/refresh');
+                await api.post(API_ROUTES.AUTH.REFRESH);
                 return api(originalRequest);
 
             } catch (refreshError) {

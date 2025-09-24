@@ -1,4 +1,5 @@
 import api from "./api";
+import { API_ROUTES } from '../constants/apiRoutes';
 
 export interface CompileRunRequest{
     source:string;
@@ -22,11 +23,11 @@ export interface Judge0Languages{
 }
 
 export const runOnServer=async(payload:CompileRunRequest):Promise<CompileRunResponse>=>{
-    const response=await api.post('/compiler/run',payload)
+    const response=await api.post(API_ROUTES.COMPILER.RUN,payload)
     return response.data
 }
 
 export const listLanguages=async():Promise<Judge0Languages[]> => {
-  const response=await api.get('/compiler/languages')
+  const response=await api.get(API_ROUTES.COMPILER.LANGUAGES)
   return response.data
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {toast} from 'sonner'
 import { Button } from '@/components/ui/button';
 import {
   Mic,
@@ -30,7 +32,7 @@ import { useRouter } from 'next/navigation';
 import { useSubmitInterviewerRating } from '@/hooks/useSubmitInterviewerRating';
 import { CollaborativeEditor } from '@/components/CollaborativeEditor';
 import { useCompiler } from '@/hooks/useCompiler';
-import {judge0NameToMonaco} from '@/utils/languageMap'
+import { judge0NameToMonaco } from '@/utils/languageMap'
 
 interface VideoCallProps {
   roomId?: string;
@@ -51,6 +53,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
   const [rating, setRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState(0); 
   const [comment, setComment] = useState<string>('');
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertType, setAlertType] = useState<'tab-switch' | 'window-blur' | null>(null);
   const { submit: submitRating, loading: ratingLoading } = useSubmitInterviewerRating();
 
   // Determine local user info for labels and identity
@@ -95,6 +99,42 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     loadNames();
     return () => { isActive = false; };
   }, [_roomId, user]);
+
+  // Tab switch detection
+  useEffect(() => {
+
+    if (user?.role !== 'user') return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        sendSignal({ type: 'visibility:hidden' });
+        toast.custom((t) => (
+          <div className="flex items-center justify-between bg-gradient-to-r from-red-600 to-rose-500 font-medium text-white p-4 rounded-lg shadow-xl shadow-red-500/20">
+            <span>Your action has been noticed by the interviewer</span>
+            <X className="cursor-pointer ml-4 h-6 w-6 text-white transition-transform hover:scale-125" onClick={() => toast.dismiss(t)} />
+          </div>
+        ), { duration: Infinity });
+      }
+    };
+
+    const handleWindowBlur = () => {
+      sendSignal({ type: 'window:blur' });
+      toast.custom((t) => (
+        <div className="flex items-center justify-between bg-gradient-to-r from-red-600 to-rose-500 font-medium text-white p-4 rounded-lg shadow-xl shadow-red-500/20">
+          <span>Your action has been noticed by the interviewer</span>
+          <X className="cursor-pointer ml-4 h-6 w-6 text-white transition-transform hover:scale-125" onClick={() => toast.dismiss(t)} />
+        </div>
+      ), { duration: Infinity });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [sendSignal, user?.role]);
 
   const handleEndCall = async  () => {
     const bookingId = _roomId ?? ''
@@ -178,6 +218,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         const label = typeof msg.label === 'string' ? msg.label : String(nextId);
         setLanguage(judge0NameToMonaco(nextId, label));
         setCode((prev) => `// Start coding together in ${label}...\n` + (prev || ''));
+      } else if (msg.type === 'visibility:hidden') {
+        setAlertType('tab-switch');
+        setShowAlertModal(true);
+      } else if (msg.type === 'window:blur') {
+        setAlertType('window-blur');
+        setShowAlertModal(true);
       }
     });
     return () => { if (typeof off === 'function') off(); };
@@ -272,6 +318,28 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
           </div>
         </div>
       )}
+
+      {/* Tab Switch Modal */}
+      <Dialog open={showAlertModal} onOpenChange={setShowAlertModal}>
+        <DialogContent className="bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-slate-100 border border-slate-700">
+          <DialogHeader>
+          <DialogTitle className="text-center text-2xl font-bold">
+              {alertType === 'tab-switch' ? 'Tab Switch Detected' : 'Window Focus Lost'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center text-center">
+          <p className="text-sm text-slate-400 mb-6">
+              {alertType === 'tab-switch'
+                ? 'The user has switched tabs or minimized the browser during the video call.'
+                : 'The user has lost focus on the browser window, possibly by switching to another application or clicking on the taskbar.'
+              }
+            </p>
+            <Button onClick={() => setShowAlertModal(false)} className="bg-purple-600 hover:bg-purple-700 text-white">
+              Okay
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="absolute top-2 left-2 z-10 space-y-1">
         <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-1">

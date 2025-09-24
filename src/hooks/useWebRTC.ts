@@ -398,6 +398,8 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
     | { type: 'chat'; text: string; ts?: number }
     | { type: 'compiler:toggle'; open: boolean }
     | { type: 'compiler:tab'; tab: 'editor' | 'output' }
+    | { type: 'visibility:hidden' }
+    | { type: 'window:blur' }
     | { type: string; [k: string]: any };
     
 
