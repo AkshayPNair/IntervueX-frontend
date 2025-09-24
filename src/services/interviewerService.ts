@@ -1,4 +1,5 @@
 import api from './api';
+import { API_ROUTES } from '../constants/apiRoutes';
 import { FeedbackResponseData, SubmitFeedbackData} from '@/types/feedback.types';
 import { InterviewerDashboardResponse } from '@/types/dashboard.types';
 import { ChangePasswordData } from '@/types/auth.types';
@@ -44,7 +45,7 @@ export const submitVerification = async (data: VerificationData) => {
     formData.append('professionalBio', data.professionalBio);
     formData.append('technicalSkills', JSON.stringify(data.technicalSkills));
     
-    const response = await api.post('/interviewer/submit-verification', formData, {
+    const response = await api.post(API_ROUTES.INTERVIEWER.SUBMIT_VERIFICATION, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
@@ -54,7 +55,7 @@ export const submitVerification = async (data: VerificationData) => {
 };
 
 export const getVerificationStatus=async()=>{
-    const response=await api.get('/interviewer/verification-status')
+    const response=await api.get(API_ROUTES.INTERVIEWER.VERIFICATION_STATUS)
     return response.data
 }
 
@@ -90,7 +91,7 @@ export interface UpdateProfileData {
 }
 
 export const getInterviewerProfile=async():Promise<InterviewerProfile>=>{
-    const response=await api.get('/interviewer/profile')
+    const response=await api.get(API_ROUTES.INTERVIEWER.PROFILE)
     return response.data
 }
 
@@ -123,7 +124,7 @@ export const UpdateInterviewerProfile=async(
         formData.append('resume', files.resume);
     }
 
-    const response = await api.put('/interviewer/profile', formData, {
+    const response = await api.put(API_ROUTES.INTERVIEWER.UPDATE_PROFILE, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
@@ -132,37 +133,37 @@ export const UpdateInterviewerProfile=async(
 }
 
 export const submitFeedback=async(data:SubmitFeedbackData):Promise<SubmitFeedbackData>=>{
-    const response = await api.post('/interviewer/feedback', data);
+    const response = await api.post(API_ROUTES.INTERVIEWER.SUBMIT_FEEDBACK, data);
     return response.data;
 }
 
 export const listInterviewerFeedbacks = async():Promise<FeedbackResponseData[]>=>{
-    const response=await api.get('/interviewer/feedback')
+    const response=await api.get(API_ROUTES.INTERVIEWER.FEEDBACK)
     return response.data
 }
 
 export const getFeedbackById=async(id:string):Promise<FeedbackResponseData>=>{
-    const response = await api.get(`/interviewer/feedback/${id}`);
+    const response = await api.get(API_ROUTES.INTERVIEWER.FEEDBACK_BY_ID(id));
     return response.data;
 
 }
 
 export const getUserRatingByBooking=async(bookingId:string)=>{
-    const response = await api.get(`/interviewer/rating/${bookingId}`)
+    const response = await api.get(API_ROUTES.INTERVIEWER.RATING_BY_BOOKING(bookingId))
     return response.data
 }
 
 export const getInterviewerDashboard=async():Promise<InterviewerDashboardResponse>=>{
-    const response = await api.get('/interviewer/dashboard')
+    const response = await api.get(API_ROUTES.INTERVIEWER.DASHBOARD)
     return response.data
 }
 
 export const changeInterviewerPassword = async (data: ChangePasswordData) => {
-    const response = await api.put('/interviewer/change-password', data)
+    const response = await api.put(API_ROUTES.INTERVIEWER.CHANGE_PASSWORD, data)
     return response.data
 }
 
 export const deleteInterviewerAccount = async () => {
-    const response = await api.delete('/interviewer/delete')
+    const response = await api.delete(API_ROUTES.INTERVIEWER.DELETE_ACCOUNT)
     return response.data
 }

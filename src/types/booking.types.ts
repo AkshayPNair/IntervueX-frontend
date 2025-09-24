@@ -87,4 +87,5 @@ export interface AdminBookingList {
   startTime: string;
   endTime: string;
   status: BookingStatus;
+  paymentMethod:PaymentMethod;
 }

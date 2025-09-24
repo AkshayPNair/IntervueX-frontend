@@ -44,31 +44,47 @@ export function useNotifications() {
     // Handlers (simple toasts; can be replaced with store integration)
     const onSessionBooked: Listener = (p) => {
       if (role === 'interviewer') {
-        toast.success('New session booked', { description: `Booking ${p.bookingId} for ${p.date} ${p.startTime}` })
+       const name = p?.userName || p?.userId
+        toast.success('New session booked', { description: name ? `Booked by ${name} on ${p.date} ${p.startTime}` : `Booking ${p.bookingId} for ${p.date} ${p.startTime}` })
       }
     }
 
     const onFeedbackSubmitted: Listener = (p) => {
       if (role === 'user') {
-        toast.success('Feedback received', { description: `From interviewer ${p.interviewerId}` })
+        const from = p?.interviewerName || p?.interviewerId
+        toast.success('Feedback received', { description: `From interviewer ${from}` })
       }
     }
 
     const onRatingSubmitted: Listener = (p) => {
       if (role === 'interviewer') {
-        toast.success('New rating received', { description: `Rating ${p.rating} for booking ${p.bookingId}` })
+        const from = p?.userName || p?.userId
+        toast.success('New rating received', { description: `From ${from} • Rating ${p.rating} for booking ${p.bookingId}` })
       }
     }
 
     const onWalletCredit: Listener = (p) => {
       if (role === 'interviewer' || role === 'admin') {
-        toast.success('Wallet credited', { description: `Amount: ${p.amount}` })
+        const who = p?.userName || p?.userId
+        const interviewer = p?.interviewerName || p?.interviewerId
+        toast.success('Wallet credited', {
+          description:
+            role === 'admin'
+              ? `User: ${who} • Interviewer: ${interviewer} • Amount: ${p.amount}`
+              : `From ${who} • Amount: ${p.amount}`,
+        })
       }
     }
 
     const onWalletDebit: Listener = (p) => {
       if (role === 'user' || role === 'admin') {
-        toast.warning('Wallet debited', { description: `Amount: ${p.amount}` })
+         const interviewer = p?.interviewerName || p?.interviewerId
+        toast.warning('Wallet debited', {
+          description:
+            role === 'admin'
+              ? `Interviewer: ${interviewer} • Amount: ${p.amount}`
+              : `To interviewer ${interviewer} • Amount: ${p.amount}`,
+        })
       }
     }
 

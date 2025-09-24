@@ -73,71 +73,82 @@ export function useNotificationCenter() {
 
     const onSessionBooked: Listener = (p) => {
       if (role === "interviewer") {
+        const name = p?.userName || p?.userId
         add({
           id: makeId(NotifyEvents.SessionBooked),
           type: "SessionBooked",
           title: "New session booked",
-          description: `Booking ${p.bookingId} on ${p.date} ${p.startTime}`,
+          description: name ? `Booked by ${name} on ${p.date} ${p.startTime}` : `Booking ${p.bookingId} on ${p.date} ${p.startTime}`,
           timestamp: Date.now(),
           read: false,
         })
-        toast.success("New session booked", { description: `Booking ${p.bookingId}` })
+        toast.success("New session booked", { description: name ? `Booked by ${name}` : `Booking ${p.bookingId}` })
       }
     }
 
     const onFeedbackSubmitted: Listener = (p) => {
       if (role === "user") {
+        const interviewer = p?.interviewerName || p?.interviewerId
         add({
           id: makeId(NotifyEvents.FeedbackSubmitted),
           type: "FeedbackSubmitted",
           title: "Feedback received",
-          description: `From interviewer ${p.interviewerId}`,
+          description: `From interviewer ${interviewer}`,
           timestamp: Date.now(),
           read: false,
         })
-        toast.success("Feedback received", { description: `From interviewer ${p.interviewerId}` })
+        toast.success("Feedback received", { description: `From interviewer ${interviewer}` })
       }
     }
 
     const onRatingSubmitted: Listener = (p) => {
       if (role === "interviewer") {
+        const user = p?.userName || p?.userId
         add({
           id: makeId(NotifyEvents.RatingSubmitted),
           type: "RatingSubmitted",
           title: "New rating received",
-          description: `Rating ${p.rating} for booking ${p.bookingId}`,
+           description: `Rating ${p.rating} from ${user}`,
           timestamp: Date.now(),
           read: false,
         })
-        toast.success("New rating received", { description: `Rating ${p.rating}` })
+        toast.success("New rating received", { description: `Rating ${p.rating} from ${user}` })
       }
     }
 
     const onWalletCredit: Listener = (p) => {
       if (role === "interviewer" || role === "admin") {
+        const user = p?.userName || p?.userId
+        const description = role === "admin"
+          ? `User: ${user} • Amount: ${p.amount}`
+          : `Amount: ${p.amount}`
         add({
           id: makeId(NotifyEvents.WalletCredit),
           type: "WalletCredit",
           title: "Wallet credited",
-          description: `Amount: ${p.amount}`,
+           description,
           timestamp: Date.now(),
           read: false,
         })
-        toast.success("Wallet credited", { description: `Amount: ${p.amount}` })
+        toast.success("Wallet credited", { description })
       }
     }
 
     const onWalletDebit: Listener = (p) => {
       if (role === "user" || role === "admin") {
+        const interviewer = p?.interviewerName || p?.interviewerId
+        const description = role === "admin"
+          ? `Interviewer: ${interviewer} • Amount: ${p.amount}`
+          : `Amount: ${p.amount}`
         add({
           id: makeId(NotifyEvents.WalletDebit),
           type: "WalletDebit",
           title: "Wallet debited",
-          description: `Amount: ${p.amount}`,
+           description,
           timestamp: Date.now(),
           read: false,
         })
-        toast.warning("Wallet debited", { description: `Amount: ${p.amount}` })
+        toast.warning("Wallet debited", { description })
       }
     }
 

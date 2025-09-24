@@ -7,7 +7,9 @@ import { ReusableTable, TableColumn } from "../../../components/ui/ReusableTable
 import type { AdminBookingList } from "../../../types/booking.types";
 import { BookingStatus } from "../../../types/booking.types";
 import Paginator from "../../../components/ui/paginator";
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar ,Eye} from "lucide-react";
+import { Button } from "../../../components/ui/button";
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from "../../../components/ui/dialog";
 
 // Small helper to format date ranges (fallback-safe)
 const formatDateRange = (date: string, startTime: string, endTime: string) => {
@@ -40,6 +42,9 @@ export default function AdminSessionsPage() {
   const [dateFilter, setDateFilter] = useState<string>("All");
   const [page, setPage] = useState(1);
   const pageSize = 6; 
+
+  const [selectedSession, setSelectedSession] = useState<AdminBookingList | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Derived filtering
   const filteredSessions = useMemo(() => {
@@ -136,6 +141,25 @@ export default function AdminSessionsPage() {
       key: "status",
       header: "Status",
       render: (row) => <StatusBadge status={row.status} />,
+
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedSession(row);
+            setIsModalOpen(true);
+          }}
+          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+        >
+          <Eye className="w-4 h-4 mr-1" />
+          Details
+        </Button>
+      ),
     },
   ];
 
@@ -260,6 +284,51 @@ export default function AdminSessionsPage() {
         pageSize={pageSize}
         className="justify-center"
       />
+
+
+      {/* Session Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-purple-300">Session Details</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Detailed information about the selected session.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSession && (
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Session ID:</span>
+                <span className="text-white">{selectedSession.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">User Name:</span>
+                <span className="text-white">{selectedSession.userName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Interviewer Name:</span>
+                <span className="text-white">{selectedSession.interviewerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Date:</span>
+                <span className="text-white"> {new Date(selectedSession.date).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Time:</span>
+                <span className="text-white">{selectedSession.startTime} - {selectedSession.endTime}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Payment Method:</span>
+                <span className="text-white capitalize">{selectedSession.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Status:</span>
+                <StatusBadge status={selectedSession.status} />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
