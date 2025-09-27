@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,useMemo, useEffect} from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { useInterviewerBookings } from "@/hooks/useInterviewerBookings";
 import { useSubmitFeedback } from "@/hooks/useSubmitFeedback";
 import { useFeedbackById } from "@/hooks/useFeedbackById";
 import { useCompleteBooking } from "@/hooks/useCompleteBooking";
+import { toast } from "sonner";
 
 const Feedback = () => {
   const params = useParams();
@@ -38,8 +39,19 @@ const Feedback = () => {
   const [candidateEmail, setCandidateEmail] = useState<string>("");
   const [candidateSkills, setCandidateSkills] = useState<string[]>([]);
   const [sessionDate, setSessionDate] = useState<string>("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { submitFeedback, loading: submitLoading } = useSubmitFeedback();
-  const { bookings, loading: bookingsLoading } = useInterviewerBookings();
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const { [field]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+  const { bookings } = useInterviewerBookings();
   const { completeSession } = useCompleteBooking();
 
   useEffect(() => {
@@ -52,27 +64,43 @@ const Feedback = () => {
     }
   }, [mode, bookingId, bookings]);
 
-  const RatingStars = ({ rating, setRating, label }: { rating: number; setRating: (rating: number) => void; label: string }) => (
+  const RatingStars = ({
+    rating,
+    setRating,
+    label,
+    field,
+    error,
+  }: {
+    rating: number;
+    setRating: (rating: number) => void;
+    label: string;
+    field: string;
+    error?: string;
+  }) => (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-white">{label}</Label>
       <div className="flex space-x-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
-            onClick={() => setRating(star)}
+            onClick={() => {
+              setRating(star);
+              clearError(field);
+            }}
             className="transition-colors hover:scale-110 transform duration-200"
             disabled={mode === 'view'}
           >
             <Star
               className={`w-6 h-6 ${
-                star <= rating 
-                  ? 'text-yellow-400 fill-current' 
+                star <= rating
+                  ? 'text-yellow-400 fill-current'
                   : 'text-gray-400 hover:text-yellow-200'
               }`}
             />
           </button>
         ))}
       </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 
@@ -95,8 +123,65 @@ const Feedback = () => {
   }, [mode, feedback, bookings]);
 
 
+  const validationRules = [
+    { field: 'overallFeedback', value: generalFeedback, label: 'General Comments' },
+    { field: 'strengths', value: strengths, label: 'Key Strengths' },
+    { field: 'improvements', value: improvements, label: 'Areas for Improvement' },
+  ];
+
+  const ratingValidations = [
+    { field: 'overallRating', value: overallRating, label: 'Overall Performance' },
+    { field: 'technicalRating', value: technicalRating, label: 'Technical Skills' },
+    { field: 'communicationRating', value: communicationRating, label: 'Communication' },
+    { field: 'problemSolvingRating', value: problemSolvingRating, label: 'Problem Solving' },
+  ];
+
   const handleSubmit = async () => {
     if (mode !== 'create' || submitting) return;
+
+    const newErrors: Record<string, string> = {};
+
+    ratingValidations.forEach(({ field, value, label }) => {
+      if (value <= 0) {
+        newErrors[field] = `${label} rating is required`;
+      } else {
+        clearError(field);
+      }
+    });
+
+    validationRules.forEach(({ field, value, label }) => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        newErrors[field] = `${label} is required`;
+        return;
+      }
+      if (trimmed.length < 20) {
+        newErrors[field] = `${label} must be at least 20 characters`;
+        return;
+      }
+      if (/^\d+$/.test(trimmed)) {
+        newErrors[field] = `${label} cannot contain only numbers`;
+        return;
+      }
+      if (/^[^a-zA-Z]+$/.test(trimmed)) {
+        newErrors[field] = `${label} must include at least one letter`;
+        return;
+      }
+      if (/[^a-zA-Z\s0-9]/.test(trimmed)) {
+        newErrors[field] = `${label} cannot contain special characters`;
+        return;
+      }
+      clearError(field);
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstErrorKey = Object.keys(newErrors)[0];
+      toast.error(newErrors[firstErrorKey]);
+      return;
+    }
+
+    setErrors({});
     setSubmitting(true);
     try {
       await submitFeedback({
@@ -105,9 +190,9 @@ const Feedback = () => {
         technicalRating,
         communicationRating,
         problemSolvingRating,
-        overallFeedback: generalFeedback,
-        strengths,
-        improvements,
+        overallFeedback: generalFeedback.trim(),
+        strengths: strengths.trim(),
+        improvements: improvements.trim(),
       });
       if (bookingId) {
         await completeSession({ bookingId });
@@ -115,6 +200,7 @@ const Feedback = () => {
       router.push('/interviewer/feedback');
     } catch (e) {
       console.error('Failed to submit feedback', e);
+      toast.error('Failed to submit feedback');
     } finally {
       setSubmitting(false);
     }
@@ -186,21 +272,29 @@ const Feedback = () => {
                     rating={overallRating} 
                     setRating={setOverallRating} 
                     label="Overall Performance" 
+                    field="overallRating"
+                    error={errors.overallRating}
                   />
                   <RatingStars 
                     rating={technicalRating} 
                     setRating={setTechnicalRating} 
                     label="Technical Skills" 
+                    field="technicalRating"
+                    error={errors.technicalRating}
                   />
                   <RatingStars 
                     rating={communicationRating} 
                     setRating={setCommunicationRating} 
                     label="Communication" 
+                    field="communicationRating"
+                    error={errors.communicationRating}
                   />
                   <RatingStars 
                     rating={problemSolvingRating} 
                     setRating={setProblemSolvingRating} 
                     label="Problem Solving" 
+                    field="problemSolvingRating"
+                    error={errors.problemSolvingRating}
                   />
                 </div>
               </div>

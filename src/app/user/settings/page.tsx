@@ -273,7 +273,7 @@ export default function SettingsPage() {
             >
               <Card className="bg-gradient-to-br from-[#FF7B72]/10 to-[#DA3633]/10 backdrop-blur-md border-[#FF7B72]/30">
                 <CardHeader>
-                  <CardTitle className="text-[#E6EDF3] flex items-center text-2xl">
+                  <CardTitle className="text-red-400 flex items-center text-2xl">
                     <AlertTriangle className="w-6 h-6 mr-3 text-[#FF7B72]" />
                     Danger Zone
                   </CardTitle>
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                   <div className="bg-[#FF7B72]/5 border border-[#FF7B72]/20 rounded-lg p-6">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-[#E6EDF3] font-semibold text-lg mb-2">Delete Account</h3>
+                        <h3 className="text-red-400 font-semibold text-lg mb-2">Delete Account</h3>
                         <p className="text-[#7D8590] mb-4">
                           Once you delete your account, there is no going back. Please be certain.
                         </p>

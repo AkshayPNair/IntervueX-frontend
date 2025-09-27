@@ -10,6 +10,7 @@ interface User {
     profilePicture?: string;
     resume?: string;
     skills?: string[];
+    googleId?:string;
 }
 
 const initialState={
