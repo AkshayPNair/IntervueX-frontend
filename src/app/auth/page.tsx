@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Navigation } from "../../components/navigation"
 import { Particle } from "../../components/ui/particle"
 import { useAuth } from '../../hooks/useAuth'
-import { Eye, EyeOff, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, CheckCircle,Loader2 } from "lucide-react"
 import GoogleLoginButton from "../../components/GoogleLoginButton"
 import RoleSelectionModal from "../../components/RoleSelectionModal"
 import { toast } from 'sonner'
@@ -34,6 +34,7 @@ export default function Auth() {
   const [showRoleModal, setShowRoleModal] = useState<boolean>(false)
   const [googleUserName, setGoogleUserName] = useState<string>('')
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   useEffect(() => {
     if (!user) return;
@@ -105,12 +106,15 @@ export default function Auth() {
 
   const handleSubmit = async () => {
     const newErrors: { [key: string]: string } = {}
+    setIsLoading(true)
 
     try {
       if (!isLogin) {
 
         if (!formData.name.trim()) {
           newErrors.name = "Name is required"
+        }else if(!/^[a-zA-Z][a-zA-Z\s]*$/.test(formData.name)){
+          newErrors.name = "Name must only contain letters"
         }
         if (!formData.email.trim()) {
           newErrors.email = "Email is required"
@@ -128,6 +132,7 @@ export default function Auth() {
         }
         if (Object.keys(newErrors).length > 0) {
           setErrors(newErrors)
+          setIsLoading(false)
           return
         }
         await signup(
@@ -156,6 +161,7 @@ export default function Auth() {
 
         if (Object.keys(newErrors).length > 0) {
           setErrors(newErrors)
+          setIsLoading(false)
           return
         }
         const user = await login(formData.email, formData.password);
@@ -172,6 +178,8 @@ export default function Auth() {
     } catch (err: any) {
       toast.error(err.response?.data?.error || (isLogin ? "Login failed" : "Signup failed"));
       console.error("Signup error:", err);
+    }finally{
+      setIsLoading(false)
     }
   }
 
@@ -501,12 +509,20 @@ export default function Auth() {
                   )}
                 </motion.div>
 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <motion.div whileHover={!isLoading ? { scale: 1.02 } : {}} whileTap={!isLoading ? { scale: 0.98 } : {}}>
                   <Button
                     onClick={handleSubmit}
-                    className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80 text-white shadow-lg hover:shadow-[0_0_25px_rgba(188,140,255,0.6)] transition-all duration-300 h-12 text-lg font-semibold"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/80 hover:to-[#3B0A58]/80 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg hover:shadow-[0_0_25px_rgba(188,140,255,0.6)] transition-all duration-300 h-12 text-lg font-semibold"
                   >
-                    {isLogin ? "Sign In" : "Create Account"}
+                         {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                        Loading...
+                      </>
+                    ) : (
+                      isLogin ? "Sign In" : "Create Account"
+                    )}
                   </Button>
                 </motion.div>
 

@@ -18,20 +18,55 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [newLanguage, setNewLanguage] = useState("");
+    const [nameError, setNameError] = useState<string | null>(null);
+    const [jobTitleError, setJobTitleError] = useState<string | null>(null);
+    const [yearsExperienceError, setYearsExperienceError] = useState<string | null>(null);
+    const [professionalBioError, setProfessionalBioError] = useState<string | null>(null);
+    const [skillError, setSkillError] = useState<string | null>(null);
+    const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
     name: "",
     email: "",
     jobTitle: "",
-    yearsOfExperience: 0,
+    yearsOfExperience: "",
     professionalBio: "",
     technicalSkills: [] as string[],
-    hourlyRate:0
+    hourlyRate:500
   });
   
   // File states
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+
+  const handleProfilePicUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      setProfilePicFile(file);
+      setProfilePicPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleResumeUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please select a PDF or DOCX file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Resume file size must be less than 10MB');
+        return;
+      }
+      setResumeFile(file);
+    }
+  };
 
   useEffect(() => {
     loadProfile();
@@ -48,10 +83,10 @@ const Profile = () => {
         name: profileData.user.name,
         email: profileData.user.email,
         jobTitle: profileData.profile.jobTitle || "",
-        yearsOfExperience: profileData.profile.yearsOfExperience || 0,
+        yearsOfExperience: profileData.profile.yearsOfExperience?.toString() || "",
         professionalBio: profileData.profile.professionalBio || "",
         technicalSkills: profileData.profile.technicalSkills || [],
-        hourlyRate:profileData.profile.hourlyRate||0
+        hourlyRate:profileData.profile.hourlyRate||500
       });
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -62,13 +97,26 @@ const Profile = () => {
   };
 
   const addLanguage = () => {
-    if (newLanguage.trim() && !formData.technicalSkills.includes(newLanguage.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        technicalSkills: [...prev.technicalSkills, newLanguage.trim()]
-      }));
-      setNewLanguage("");
+    const trimmed = newLanguage.trim();
+    if (!trimmed) return;
+
+    const errors = validateSkill(trimmed);
+    if (errors.length > 0) {
+      setSkillError(errors[0]);
+      return;
     }
+
+    if (formData.technicalSkills.includes(trimmed)) {
+      setSkillError("Skill already added");
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      technicalSkills: [...prev.technicalSkills, trimmed]
+    }));
+    setNewLanguage("");
+    setSkillError(null);
   };
 
   const removeLanguage = (language: string) => {
@@ -83,22 +131,92 @@ const Profile = () => {
       ...prev,
       [field]: value
     }));
+
+    // Validate based on field
+    if (field === 'name') {
+      const errors = validateName(value);
+      setNameError(errors.length > 0 ? errors[0] : null);
+    } else if (field === 'jobTitle') {
+      const errors = validateJobTitle(value);
+      setJobTitleError(errors.length > 0 ? errors[0] : null);
+    } else if (field === 'yearsOfExperience') {
+      const errors = validateYearsExperience(value);
+      setYearsExperienceError(errors.length > 0 ? errors[0] : null);
+    } else if (field === 'professionalBio') {
+      const errors = validateProfessionalBio(value);
+      setProfessionalBioError(errors.length > 0 ? errors[0] : null);
+    } else if (field === 'hourlyRate') {
+      const errors = validateHourlyRate(value);
+      setHourlyRateError(errors.length > 0 ? errors[0] : null);
+    }
+  };
+
+  const validateName = (name: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = name.trim();
+    if (trimmed !== name) errors.push("Name cannot start or end with spaces");
+    if (/[^a-zA-Z\s]/.test(trimmed)) errors.push("Name cannot contain numbers or special characters");
+    return errors;
+  };
+
+  const validateJobTitle = (title: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = title.trim();
+    if (trimmed !== title) errors.push("Job title cannot start or end with spaces");
+    if (/[^a-zA-Z\s]/.test(trimmed)) errors.push("Job title cannot contain numbers or special characters");
+    return errors;
+  };
+
+  const validateYearsExperience = (exp: string): string[] => {
+    const errors: string[] = [];
+    if (exp !== exp.trimStart() || exp !== exp.trimEnd()) errors.push("Experience cannot start or end with spaces");
+    if (/[^0-9]/.test(exp)) errors.push("Experience can only contain numbers");
+    const years = parseInt(exp) || 0;
+    if (years > 50) errors.push("Years of experience cannot exceed 50");
+    return errors;
+  };
+
+  const validateProfessionalBio = (bio: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = bio.trim();
+    if (trimmed !== bio) errors.push("Bio cannot start or end with spaces");
+    if (/^\d+$/.test(trimmed)) errors.push("Bio cannot be only numbers");
+    if (/[^a-zA-Z0-9\s]/.test(trimmed)) errors.push("Bio cannot contain special characters");
+    return errors;
+  };
+
+  const validateSkill = (skill: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = skill.trim();
+    if (trimmed !== skill) errors.push("Skill cannot start or end with spaces");
+    if (/^\d+$/.test(trimmed)) errors.push("Skill cannot be only numbers");
+    if (/[^a-zA-Z0-9\s]/.test(trimmed)) errors.push("Skill cannot contain special characters");
+    return errors;
+  };
+
+  const validateHourlyRate = (rate: number): string[] => {
+    const errors: string[] = [];
+    if (rate > 10000) errors.push("Hourly rate cannot be more than 10000");
+    return errors;
   };
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
     if (!formData.name.trim()) errors.push("Name is required");
+    if (nameError) errors.push(nameError);
     if (!formData.jobTitle.trim()) errors.push("Job title is required");
-    if (!Number.isInteger(formData.yearsOfExperience) || formData.yearsOfExperience < 0 || formData.yearsOfExperience > 30) {
-      errors.push("Years of experience must be an integer between 0 and 30");
-    }
+    if (jobTitleError) errors.push(jobTitleError);
+    if (!formData.yearsOfExperience.trim()) errors.push("Years of experience is required");
+    if (yearsExperienceError) errors.push(yearsExperienceError);
     if (!formData.professionalBio.trim()) errors.push("Professional bio is required");
+    if (professionalBioError) errors.push(professionalBioError);
     if (!Array.isArray(formData.technicalSkills) || formData.technicalSkills.length === 0) {
       errors.push("At least one technical skill is required");
     }
-    if (!Number.isInteger(formData.hourlyRate) || formData.hourlyRate < 0) {
-      errors.push("Hourly rate must be a non-negative integer");
+    if (formData.hourlyRate < 0 || formData.hourlyRate > 10000) {
+      errors.push("Hourly rate must be between 0 and 10000");
     }
+    if (hourlyRateError) errors.push(hourlyRateError);
     return errors;
   };
 
@@ -118,7 +236,7 @@ const Profile = () => {
       const updateData: UpdateProfileData = {
         name: formData.name,
         jobTitle: formData.jobTitle,
-        yearsOfExperience: formData.yearsOfExperience,
+        yearsOfExperience: parseInt(formData.yearsOfExperience) || 0,
         professionalBio: formData.professionalBio,
         technicalSkills: formData.technicalSkills,
         hourlyRate: formData.hourlyRate
@@ -131,9 +249,13 @@ const Profile = () => {
 
       const updatedProfile = await UpdateInterviewerProfile(updateData, files);
       setProfile(updatedProfile);
-      
+
       // Reset file states
       setProfilePicFile(null);
+      if (profilePicPreview) {
+        URL.revokeObjectURL(profilePicPreview);
+      }
+      setProfilePicPreview(null);
       setResumeFile(null);
       
       toast.success("Profile updated successfully!");
@@ -195,7 +317,7 @@ const Profile = () => {
               <div className="p-6 text-center">
                 <div className="mb-6">
                   <Avatar className="w-24 h-24 mx-auto mb-4 ring-2 ring-purple-400/50">
-                  <AvatarImage src={profile?.profile.profilePic || "/placeholder.svg"} alt="Profile" />
+                  <AvatarImage src={profilePicPreview || profile?.profile.profilePic || "/placeholder.svg"} alt="Profile" />
                     <AvatarFallback className="text-2xl bg-gradient-to-br from-purple-600 to-purple-800 text-white">
                       {formData.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
@@ -208,7 +330,7 @@ const Profile = () => {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setProfilePicFile(e.target.files?.[0] || null)}
+                    onChange={handleProfilePicUpload}
                     className="hidden"
                     id="profile-pic-upload"
                   />
@@ -275,12 +397,12 @@ const Profile = () => {
                       {profile?.profile.resume ? 'Update Resume File (PDF/DOCX)' : 'Resume File (PDF/DOCX)'}
                     </Label>
                     <div className="relative">
-                      <Input 
-                        id="resume" 
-                        type="file" 
+                      <Input
+                        id="resume"
+                        type="file"
                         accept=".pdf,.docx,.doc"
-                        onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                        className="glass-effect border-purple-400/30 text-white h-12 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600/20 file:text-purple-300 hover:file:bg-purple-600/30 file:transition-colors" 
+                        onChange={handleResumeUpload}
+                        className="glass-effect border-purple-400/30 text-white h-12 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600/20 file:text-purple-300 hover:file:bg-purple-600/30 file:transition-colors"
                       />
                     </div>
                     {resumeFile && (
@@ -292,7 +414,7 @@ const Profile = () => {
                   <div className="glass-card border border-purple-400/20 rounded-lg p-4">
                     <div className="flex items-center text-purple-300 text-sm">
                       <Upload className="w-4 h-4 mr-2" />
-                      <span>Supported formats: PDF, DOC, DOCX (Max size: 5MB)</span>
+                      <span>Supported formats: PDF, DOC, DOCX (Max size: 10MB)</span>
                     </div>
                   </div>
                 </div>
@@ -310,12 +432,13 @@ const Profile = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-white">Full Name</Label>
-                    <Input 
-                      id="name" 
+                    <Input
+                      id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400"
                     />
+                    {nameError && <p className="text-red-400 text-sm">{nameError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-white">Email</Label>
@@ -339,27 +462,29 @@ const Profile = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="jobTitle" className="text-white">Job Title</Label>
-                    <Input 
-                      id="jobTitle" 
+                    <Input
+                      id="jobTitle"
                       value={formData.jobTitle}
                       onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400"
                     />
+                    {jobTitleError && <p className="text-red-400 text-sm">{jobTitleError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="yearsExperience" className="text-white">Years of Experience</Label>
-                    <Input 
-                      id="yearsExperience" 
-                      type="number" 
+                    <Input
+                      id="yearsExperience"
+                      type="text"
                      value={formData.yearsOfExperience}
-                     onChange={(e) => handleInputChange('yearsOfExperience', Math.floor(Number(e.target.value) || 0))}
-                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                     onChange={(e) => handleInputChange('yearsOfExperience', e.target.value)}
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400"
                     />
+                    {yearsExperienceError && <p className="text-red-400 text-sm">{yearsExperienceError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="professionalBio" className="text-white">Professional Bio (minimum 100 words)</Label>
-                    <Textarea 
-                      id="professionalBio" 
+                    <Textarea
+                      id="professionalBio"
                       rows={5}
                       value={formData.professionalBio}
                       onChange={(e) => handleInputChange('professionalBio', e.target.value)}
@@ -367,17 +492,19 @@ const Profile = () => {
                       className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400 resize-none"
                     />
                     <p className="text-xs text-purple-300">Minimum 100 words required</p>
+                    {professionalBioError && <p className="text-red-400 text-sm">{professionalBioError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="hourlyRate" className="text-white">Hourly Rate</Label>
-                    <Input 
-                      id="hourlyRate" 
+                    <Input
+                      id="hourlyRate"
                       type="number"
                       value={formData.hourlyRate}
                       onChange={(e) => handleInputChange('hourlyRate', Math.floor(Number(e.target.value) || 0))}
                       placeholder="Enter your hourly rate in Rs"
-                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400" 
+                      className="glass-effect border-purple-400/30 text-white placeholder:text-purple-300 focus:border-purple-400"
                     />
+                    {hourlyRateError && <p className="text-red-400 text-sm">{hourlyRateError}</p>}
                   </div>
                 </div>
               </div>
@@ -419,6 +546,7 @@ const Profile = () => {
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
+                  {skillError && <p className="text-red-400 text-sm">{skillError}</p>}
                 </div>
               </div>
             </div>

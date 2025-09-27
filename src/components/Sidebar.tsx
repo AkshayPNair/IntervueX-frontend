@@ -115,7 +115,7 @@ export default function Sidebar() {
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                   >
-                    1
+                    
                   </motion.span>
                 )}
               </Link>

@@ -53,6 +53,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
   const [rating, setRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState(0); 
   const [comment, setComment] = useState<string>('');
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertType, setAlertType] = useState<'tab-switch' | 'window-blur' | null>(null);
   const { submit: submitRating, loading: ratingLoading } = useSubmitInterviewerRating();
@@ -156,10 +157,43 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     }
   }
 
+  const validateComment = (input: string): string | null => {
+    const trimmed = input.trim();
+
+    if (!trimmed) {
+      return 'Please provide a brief comment before submitting.';
+    }
+
+    if (input !== trimmed) {
+      return 'Comment cannot start or end with spaces.';
+    }
+
+    if (trimmed.length <= 20) {
+      return 'Comment must be longer than 20 characters.';
+    }
+
+    if (!/^[A-Za-z0-9 ]+$/.test(trimmed)) {
+      return 'Comment can only include letters, numbers, and spaces.';
+    }
+
+    if (/^\d+$/.test(trimmed)) {
+      return 'Comment cannot consist of numbers only.';
+    }
+
+    return null;
+  };
+
   const handleSubmitRating=async()=>{
+    const commentValidationError = validateComment(comment);
+    if (commentValidationError) {
+      setCommentError(commentValidationError);
+      return;
+    }
+    setCommentError(null);
+    const Comment = comment.trim();
     const bookingId=_roomId??''
     if(!bookingId) return
-      await submitRating({bookingId,rating,comment})
+      await submitRating({bookingId,rating,comment:Comment})
       await completeSession({bookingId})
       setShowRating(false)
       if(typeof window !== 'undefined'){
@@ -293,11 +327,18 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
             <textarea
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e) => {
+                setComment(e.target.value);
+                if (commentError) setCommentError(null);
+              }}
               placeholder="Tell us more about your experience"
-              className="w-full min-h-28 rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-200 placeholder:text-slate-500 mb-6
-                         focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#0D1117] transition-shadow"
+              className={`w-full min-h-28 rounded-lg border bg-slate-900/50 p-3 text-sm text-slate-200 placeholder:text-slate-500
+                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0D1117] transition-shadow
+                         ${commentError ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:ring-purple-500'}`}
             />
+            {commentError && (
+              <p className="text-xs text-red-400 mb-4">{commentError}</p>
+            )}
 
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setShowRating(false)} disabled={ratingLoading} className="text-slate-300 hover:bg-slate-800 hover:text-white">

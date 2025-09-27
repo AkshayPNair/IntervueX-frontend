@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [skillError, setSkillError] = useState<string | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
 
   const [name, setName] = useState("")
   const [skills, setSkills] = useState<string[]>([])
@@ -65,10 +67,23 @@ export default function ProfilePage() {
 
 
   const addSkill = () => {
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      setSkills([...skills, newSkill.trim()])
-      setNewSkill("")
+    const trimmed = newSkill.trim()
+    if (!trimmed) return
+
+    const errors = validateSkill(trimmed)
+    if (errors.length > 0) {
+      setSkillError(errors[0])
+      return
     }
+
+    if (skills.includes(trimmed)) {
+      setSkillError("Skill already added")
+      return
+    }
+
+    setSkills([...skills, trimmed])
+    setNewSkill("")
+    setSkillError(null)
   }
 
   const removeSkill = (skillToRemove: string) => {
@@ -95,6 +110,10 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (file) {
       if (file.type === 'application/pdf') {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error('PDF file size must be less than 10MB')
+          return
+        }
         setResume(file)
         setResumeName(file.name)
       } else {
@@ -111,8 +130,26 @@ export default function ProfilePage() {
 
    const validateUserForm = (): string[] => {
     const errors: string[] = [];
-    if (!name.trim()) errors.push('Name is required');
+    const nameErrors = validateName(name);
+    errors.push(...nameErrors);
     if (!Array.isArray(skills) || skills.length === 0) errors.push('At least one skill is required');
+    return errors;
+  };
+
+  const validateSkill = (skill: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = skill.trim();
+    if (/^\d+$/.test(trimmed)) errors.push("Skill cannot be only numbers");
+    if (/[^a-zA-Z0-9\s]/.test(trimmed)) errors.push("Skill cannot contain special characters");
+    return errors;
+  };
+
+  const validateName = (name: string): string[] => {
+    const errors: string[] = [];
+    const trimmed = name.trim();
+    if (!trimmed) errors.push("Name is required");
+    if (/^\d+$/.test(trimmed)) errors.push("Name cannot be only numbers");
+    if (/[^a-zA-Z\s]/.test(trimmed)) errors.push("Name cannot contain special characters or numbers");
     return errors;
   };
 
@@ -276,9 +313,15 @@ export default function ProfilePage() {
                     <label className="text-sm font-medium text-[#E6EDF3]">Name</label>
                     <Input
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/^\s+/, '');
+                        setName(val);
+                        const errors = validateName(val);
+                        setNameError(errors.length > 0 ? errors[0] : null);
+                      }}
                       className="bg-[#0D1117] border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF]"
                     />
+                    {nameError && <p className="text-red-500 text-xs mt-1">{nameError}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#E6EDF3]">Email</label>
@@ -358,7 +401,7 @@ export default function ProfilePage() {
                     <Input
                       placeholder="Add a skill"
                       value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
+                      onChange={(e) => { setNewSkill(e.target.value); setSkillError(null) }}
                       onKeyPress={(e) => e.key === "Enter" && addSkill()}
                       className="bg-[#0D1117] border-[#30363D] text-[#E6EDF3] focus:border-[#BC8CFF]"
                     />
@@ -369,6 +412,7 @@ export default function ProfilePage() {
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
+                  {skillError && <p className="text-red-500 text-sm ml-2">{skillError}</p>}
 
                   <div className="space-y-3">
                     <h4 className="text-[#E6EDF3] font-semibold">Your Skills</h4>

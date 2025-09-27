@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Camera, Upload, User, Briefcase, Award, FileText, CheckCircle, Clock, X, Plus, ChevronLeft, ChevronRight, XCircle,AlertTriangle } from "lucide-react";
 import { submitVerification, VerificationData, getVerificationStatus, VerificationStatusData } from "../../../services/interviewerService";
 import { useRouter } from "next/navigation"
+import {toast} from 'sonner'
 
 const InterviewerVerification = () => {
     const router = useRouter();
@@ -24,6 +25,10 @@ const InterviewerVerification = () => {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [verificationStatus, setVerificationStatus] = useState<VerificationStatusData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [jobTitleError, setJobTitleError] = useState<string | null>(null)
+    const [yearsExperienceError, setYearsExperienceError] = useState<string | null>(null)
+    const [professionalBioError, setProfessionalBioError] = useState<string | null>(null)
+    const [skillError, setSkillError] = useState<string | null>(null)
 
     useEffect(() => {
         const checkVerificationStatus = async () => {
@@ -46,11 +51,31 @@ const InterviewerVerification = () => {
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+
+        // Validate based on field
+        if (field === 'jobTitle') {
+            const errors = validateJobTitle(value);
+            setJobTitleError(errors.length > 0 ? errors[0] : null);
+        } else if (field === 'yearsExperience') {
+            const errors = validateYearsExperience(value);
+            setYearsExperienceError(errors.length > 0 ? errors[0] : null);
+        } else if (field === 'professionalBio') {
+            const errors = validateProfessionalBio(value);
+            setProfessionalBioError(errors.length > 0 ? errors[0] : null);
+        }
     };
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                toast.error('Please select an image file');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image file size must be less than 5MB');
+                return;
+            }
             setFormData(prev => ({ ...prev, profilePicture: file }));
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -63,18 +88,40 @@ const InterviewerVerification = () => {
     const handleResumeUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            if (!allowedTypes.includes(file.type)) {
+                toast.error('Please select a PDF or DOCX file');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error('Resume file size must be less than 10MB');
+                return;
+            }
             setFormData(prev => ({ ...prev, resumeFile: file }));
         }
     };
 
     const addSkill = () => {
-        if (currentSkill.trim() && !formData.technicalSkills.includes(currentSkill.trim())) {
-            setFormData(prev => ({
-                ...prev,
-                technicalSkills: [...prev.technicalSkills, currentSkill.trim()]
-            }));
-            setCurrentSkill("");
+        const trimmed = currentSkill.trim()
+        if (!trimmed) return
+
+        const errors = validateSkill(trimmed)
+        if (errors.length > 0) {
+            setSkillError(errors[0])
+            return
         }
+
+        if (formData.technicalSkills.includes(trimmed)) {
+            setSkillError("Skill already added")
+            return
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            technicalSkills: [...prev.technicalSkills, trimmed]
+        }));
+        setCurrentSkill("");
+        setSkillError(null)
     };
 
     const removeSkill = (skillToRemove: string) => {
@@ -129,12 +176,45 @@ const InterviewerVerification = () => {
         }
     };
 
+    const validateJobTitle = (title: string): string[] => {
+        const errors: string[] = [];
+        const trimmed = title.trim();
+        if (trimmed !== title) errors.push("Job title cannot start or end with spaces");
+        if (/^\d+$/.test(trimmed)) errors.push("Job title cannot be only numbers");
+        if (/[^a-zA-Z\s]/.test(trimmed)) errors.push("Job title cannot contain special characters or numbers");
+        return errors;
+    };
+
+    const validateYearsExperience = (exp: string): string[] => {
+        const errors: string[] = [];
+        if (exp !== exp.trimStart()) errors.push("Experience cannot start with spaces");
+        if (/[^0-9]/.test(exp)) errors.push("Experience can only contain numbers");
+        return errors;
+    };
+
+    const validateProfessionalBio = (bio: string): string[] => {
+        const errors: string[] = [];
+        const trimmed = bio.trim();
+        if (trimmed !== bio) errors.push("Bio cannot start or end with spaces");
+        if (/^\d+$/.test(trimmed)) errors.push("Bio cannot be only numbers");
+        if (/[^a-zA-Z0-9\s]/.test(trimmed)) errors.push("Bio cannot contain special characters");
+        return errors;
+    };
+
+    const validateSkill = (skill: string): string[] => {
+        const errors: string[] = [];
+        const trimmed = skill.trim();
+        if (/^\d+$/.test(trimmed)) errors.push("Skill cannot be only numbers");
+        if (/[^a-zA-Z0-9\s]/.test(trimmed)) errors.push("Skill cannot contain special characters");
+        return errors;
+    };
+
     const canProceed = () => {
         switch (currentStep) {
             case 1:
                 return formData.profilePicture !== null;
             case 2:
-                return formData.jobTitle && formData.yearsExperience && formData.professionalBio.length >= 100;
+                return formData.jobTitle && !jobTitleError && formData.yearsExperience && !yearsExperienceError && formData.professionalBio.length >= 100 && !professionalBioError;
             case 3:
                 return formData.technicalSkills.length > 0;
             case 4:
@@ -530,6 +610,7 @@ const InterviewerVerification = () => {
                                                         placeholder="e.g., Senior Software Engineer"
                                                         className="w-full px-4 py-3 glass-effect border border-purple-400/30 rounded-lg text-white placeholder:text-purple-300 focus:border-purple-400 focus:outline-none transition-colors"
                                                     />
+                                                    {jobTitleError && <p className="text-red-500 text-sm mt-1">{jobTitleError}</p>}
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label htmlFor="yearsExperience" className="text-white font-medium flex items-center space-x-2">
@@ -538,15 +619,14 @@ const InterviewerVerification = () => {
                                                     </label>
                                                     <input
                                                         id="yearsExperience"
-                                                        type="number"
+                                                        type="text"
                                                         required
-                                                        min="0"
-                                                        max="50"
                                                         value={formData.yearsExperience}
                                                         onChange={(e) => handleInputChange("yearsExperience", e.target.value)}
                                                         placeholder="e.g., 5"
                                                         className="w-full px-4 py-3 glass-effect border border-purple-400/30 rounded-lg text-white placeholder:text-purple-300 focus:border-purple-400 focus:outline-none transition-colors"
                                                     />
+                                                    {yearsExperienceError && <p className="text-red-500 text-sm mt-1">{yearsExperienceError}</p>}
                                                 </div>
                                             </div>
 
@@ -564,6 +644,7 @@ const InterviewerVerification = () => {
                                                     placeholder="Tell us about your professional background, expertise, and what makes you a great interviewer..."
                                                     className="w-full px-4 py-3 glass-effect border border-purple-400/30 rounded-lg text-white placeholder:text-purple-300 focus:border-purple-400 focus:outline-none transition-colors resize-none"
                                                 />
+                                                {professionalBioError && <p className="text-red-500 text-sm mt-1">{professionalBioError}</p>}
                                                 <p className="text-purple-300 text-sm">
                                                     {formData.professionalBio.length}/100 characters minimum
                                                 </p>
@@ -596,7 +677,10 @@ const InterviewerVerification = () => {
                                                         id="skillInput"
                                                         type="text"
                                                         value={currentSkill}
-                                                        onChange={(e) => setCurrentSkill(e.target.value)}
+                                                        onChange={(e) => {
+                                                            setCurrentSkill(e.target.value);
+                                                            setSkillError(null);
+                                                        }}
                                                         onKeyPress={handleKeyPress}
                                                         placeholder="e.g., JavaScript, React, Python..."
                                                         className="flex-1 px-4 py-3 glass-effect border border-purple-400/30 rounded-lg text-white placeholder:text-purple-300 focus:border-purple-400 focus:outline-none transition-colors"
@@ -611,6 +695,7 @@ const InterviewerVerification = () => {
                                                         <span>Add</span>
                                                     </button>
                                                 </div>
+                                                {skillError && <p className="text-red-500 text-sm mt-1">{skillError}</p>}
                                                 <p className="text-purple-300 text-sm">
                                                     Press Enter or click Add to add a skill. Include programming languages, frameworks, tools, and methodologies.
                                                 </p>
@@ -673,7 +758,7 @@ const InterviewerVerification = () => {
                                                 <input
                                                     id="resumeFile"
                                                     type="file"
-                                                    accept=".pdf,.doc,.docx"
+                                                    accept=".pdf,.docx"
                                                     className="hidden"
                                                     onChange={handleResumeUpload}
                                                 />

@@ -13,7 +13,7 @@ import { ArrowLeft, Mail, Clock } from "lucide-react"
 import api from '../../../services/api'
 import { toast } from 'sonner'
 
- function OTPPage() {
+function OTPPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [otp, setOtp] = useState("")
@@ -30,6 +30,31 @@ import { toast } from 'sonner'
     }
   }, [isResetPassword, resetEmail])
 
+  // Initialize timer from localStorage
+  useEffect(() => {
+    const storedEndTime = localStorage.getItem('otpResendEndTime')
+    if (storedEndTime) {
+      const endTime = parseInt(storedEndTime)
+      const now = Date.now()
+      const remaining = Math.max(0, Math.ceil((endTime - now) / 1000))
+      if (remaining > 0) {
+        setTimer(remaining)
+        setCanResend(false)
+      } else {
+        // Timer expired, start a new one
+        const newEndTime = Date.now() + 120 * 1000
+        localStorage.setItem('otpResendEndTime', newEndTime.toString())
+        setTimer(120)
+        setCanResend(false)
+      }
+    } else {
+      const endTime = Date.now() + 120 * 1000
+      localStorage.setItem('otpResendEndTime', endTime.toString())
+       setTimer(120)
+      setCanResend(false)
+    }
+  }, [])
+
   // Background particles
   const particles = Array.from({ length: 50 }, (_, i) => <Particle key={i} delay={i * 0.1} />)
 
@@ -37,20 +62,25 @@ import { toast } from 'sonner'
   useEffect(() => {
     if (timer > 0) {
       const interval = setInterval(() => {
-        setTimer((prev) => prev - 1)
+        setTimer((prev) => {
+          const newTimer = prev - 1
+          if (newTimer <= 0) {
+            localStorage.removeItem('otpResendEndTime')
+            setCanResend(true)
+          }
+          return newTimer
+        })
       }, 1000)
       return () => clearInterval(interval)
-    } else {
-      setCanResend(true)
     }
   }, [timer])
 
 
 
   const handleVerifyOTP = async () => {
-    if (otp.length !== 6){
+    if (otp.length !== 6) {
       toast.error("Please enter a complete 6-digit OTP")
-      return 
+      return
     }
 
     // const email = localStorage.getItem("otpEmail")
@@ -81,8 +111,8 @@ import { toast } from 'sonner'
         }
 
         await api.post('/auth/verify-otp', {
-          email, 
-          otp, 
+          email,
+          otp,
           type: 'reset-password'
         });
 
@@ -105,11 +135,11 @@ import { toast } from 'sonner'
         }
 
         await api.post('/auth/verify-otp', {
-          email, 
-          otp, 
-          name, 
+          email,
+          otp,
+          name,
           password,
-          type:'signup'
+          type: 'signup'
         });
 
         toast.success("OTP verified. Please login.");
@@ -148,6 +178,8 @@ import { toast } from 'sonner'
       }
     }
 
+    const endTime = Date.now() + 120 * 1000
+    localStorage.setItem('otpResendEndTime', endTime.toString())
     setTimer(120)
     setCanResend(false)
     setOtp("")
@@ -284,7 +316,10 @@ import { toast } from 'sonner'
                 >
                   <Button
                     variant="ghost"
-                    onClick={() => router.push("/auth")}
+                    onClick={() => {
+                      localStorage.removeItem('otpResendEndTime')
+                      router.push("/auth")
+                    }}
                     className="text-[#BC8CFF] hover:text-[#BC8CFF]/80 p-2 h-auto font-normal hover:bg-[#BC8CFF]/10 rounded-lg transition-all duration-200"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
