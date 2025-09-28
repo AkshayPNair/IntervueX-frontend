@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const { feedbacks } = useUserFeedbacks()
   const latestFeedback = useMemo(() => {
     if (!feedbacks || feedbacks.length === 0) return null
-    return [...feedbacks].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    return [...feedbacks].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
   }, [feedbacks])
 
   // Dashboard Overview Component
@@ -51,7 +51,8 @@ export default function DashboardPage() {
             change: "",
             icon: Video,
             color: "#BC8CFF",
-            bgColor: "from-[#BC8CFF]/20 to-[#3B0A58]/20",
+            gradientFrom: "rgba(188, 140, 255, 0.2)", // from-[#BC8CFF]/20
+            gradientTo: "rgba(59, 10, 88, 0.2)",      // to-[#3B0A58]/20
           },
           {
             title: "Average Rating",
@@ -59,7 +60,8 @@ export default function DashboardPage() {
             change: "",
             icon: Star,
             color: "#3FB950",
-            bgColor: "from-[#3FB950]/20 to-[#2EA043]/20",
+            gradientFrom: "rgba(63, 185, 80, 0.2)", // from-[#3FB950]/20
+            gradientTo: "rgba(46, 160, 67, 0.2)",   // to-[#2EA043]/20
           },
           {
             title: "Success Rate",
@@ -67,7 +69,8 @@ export default function DashboardPage() {
             change: "",
             icon: Target,
             color: "#58A6FF",
-            bgColor: "from-[#58A6FF]/20 to-[#0969DA]/20",
+            gradientFrom: "rgba(88, 166, 255, 0.2)", // from-[#58A6FF]/20
+            gradientTo: "rgba(9, 105, 218, 0.2)",    // to-[#0969DA]/20
           },
           {
             title: "Hours Practiced",
@@ -75,7 +78,8 @@ export default function DashboardPage() {
             change: "",
             icon: Clock,
             color: "#FFA657",
-            bgColor: "from-[#FFA657]/20 to-[#FB8500]/20",
+            gradientFrom: "rgba(255, 166, 87, 0.2)", // from-[#FFA657]/20
+            gradientTo: "rgba(251, 133, 0, 0.2)",    // to-[#FB8500]/20
           },
         ].map((stat, index) => (
           <motion.div
@@ -86,7 +90,10 @@ export default function DashboardPage() {
             whileHover={{ scale: 1.05, y: -5 }}
           >
             <Card
-              className={`bg-gradient-to-br ${stat.bgColor} backdrop-blur-md border-[#30363D]/50 hover:border-[#BC8CFF]/50 transition-all duration-300 overflow-hidden relative`}
+              className="backdrop-blur-md border-[#30363D]/50 hover:border-[#BC8CFF]/50 transition-all duration-300 overflow-hidden relative"
+              style={{
+                background: `linear-gradient(to bottom right, ${stat.gradientFrom}, ${stat.gradientTo})`
+              }}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
               <CardContent className="p-6 relative z-10">
@@ -97,16 +104,6 @@ export default function DashboardPage() {
                   >
                     <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
                   </div>
-                  <Badge
-                    className="text-xs font-semibold"
-                    style={{
-                      backgroundColor: `${stat.color}20`,
-                      color: stat.color,
-                      border: `1px solid ${stat.color}40`,
-                    }}
-                  >
-                    {stat.change}
-                  </Badge>
                 </div>
                 <div className="text-3xl font-bold text-[#E6EDF3] mb-1">{stat.value}</div>
                 <div className="text-[#7D8590] text-sm font-medium">{stat.title}</div>
@@ -205,7 +202,7 @@ export default function DashboardPage() {
                 This Week
               </CardTitle>
             </CardHeader>
-            
+
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -228,7 +225,10 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Achievement */}
-          <Card className="bg-gradient-to-br from-[#3FB950]/20 to-[#2EA043]/20 backdrop-blur-md border-[#3FB950]/30">
+          <Card className="backdrop-blur-md border-[#3FB950]/30"
+            style={{
+              background: 'linear-gradient(to bottom right, rgba(63, 185, 80, 0.2), rgba(46, 160, 67, 0.2))'
+            }}>
             <CardHeader>
               <CardTitle className="text-[#E6EDF3] flex items-center">
                 <Award className="w-5 h-5 mr-2 text-[#3FB950]" />
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                 <h1 className="text-4xl font-bold text-[#E6EDF3] mb-2">Welcome back, there!</h1>
                 <p className="text-[#7D8590] text-lg">Ready to ace your next interview?</p>
               </div>
-             
+
             </div>
           </div>
         </div>
