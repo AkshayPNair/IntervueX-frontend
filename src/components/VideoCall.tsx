@@ -2,8 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {toast} from 'sonner'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Mic,
   MicOff,
@@ -48,10 +55,10 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
   const [compilerTab, setCompilerTab] = useState<'editor' | 'output'>('editor');
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
-  
+
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState(0); 
+  const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState<string>('');
   const [commentError, setCommentError] = useState<string | null>(null);
   const [showAlertModal, setShowAlertModal] = useState(false);
@@ -60,7 +67,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
   // Determine local user info for labels and identity
   const signalingUrl = process.env.NEXT_PUBLIC_URL || ''
-  const { localVideoRef, remoteVideoRef, toggleAudio, toggleVideo, messages: rtcMessages, sendChat, remoteJoined, remoteVideoOn, onSignal,sendSignal } = useWebRTC(_roomId ?? 'default-room', signalingUrl)
+  const { localVideoRef, remoteVideoRef, toggleAudio, toggleVideo, messages: rtcMessages, sendChat, remoteJoined, remoteVideoOn, onSignal, sendSignal } = useWebRTC(_roomId ?? 'default-room', signalingUrl)
   const { completeSession } = useCompleteBooking()
   const router = useRouter()
 
@@ -137,11 +144,11 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     };
   }, [sendSignal, user?.role]);
 
-  const handleEndCall = async  () => {
+  const handleEndCall = async () => {
     const bookingId = _roomId ?? ''
     if (!bookingId) return
 
-    if(user?.role==='user'){
+    if (user?.role === 'user') {
       setShowRating(true)
       return
     }
@@ -183,7 +190,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     return null;
   };
 
-  const handleSubmitRating=async()=>{
+  const handleSubmitRating = async () => {
     const commentValidationError = validateComment(comment);
     if (commentValidationError) {
       setCommentError(commentValidationError);
@@ -191,14 +198,14 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
     }
     setCommentError(null);
     const Comment = comment.trim();
-    const bookingId=_roomId??''
-    if(!bookingId) return
-      await submitRating({bookingId,rating,comment:Comment})
-      await completeSession({bookingId})
-      setShowRating(false)
-      if(typeof window !== 'undefined'){
-        window.history.back()
-      }
+    const bookingId = _roomId ?? ''
+    if (!bookingId) return
+    await submitRating({ bookingId, rating, comment: Comment })
+    await completeSession({ bookingId })
+    setShowRating(false)
+    if (typeof window !== 'undefined') {
+      window.history.back()
+    }
   }
   // Compiler state via hook (Monaco + Judge0)
   const { language, setLanguage, languageId, setLanguageId, languages, stdin, setStdin, code, setCode, output, setOutput, isRunning, runCode } = useCompiler();
@@ -222,12 +229,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
   const [message, setMessage] = useState('');
 
   const handleCompilerToggle = () => {
-   const next = !isCompilerOpen;
+    const next = !isCompilerOpen;
     setIsCompilerOpen(next);
     // broadcast to peer so both see the same state
     sendSignal({ type: 'compiler:toggle', open: next });
-    if(next){
-      sendSignal({type:'compiler:tab',tab:compilerTab})
+    if (next) {
+      sendSignal({ type: 'compiler:tab', tab: compilerTab })
     }
   };
 
@@ -296,8 +303,11 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
       {/* Rating Modal */}
       {showRating && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-0">
-          <div className="w-full max-w-md rounded-2xl bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-slate-100 p-8 border border-slate-700 shadow-2xl animate-in zoom-in-95">
-            
+          <div className="w-full max-w-md rounded-2xl text-slate-100 p-8 border border-slate-700 shadow-2xl animate-in zoom-in-95"
+            style={{
+              background: 'linear-gradient(to bottom right, #0D1117, #0D1117, #3B0A58)'
+            }}>
+
             <div className="flex flex-col items-center text-center">
               <h3 className="text-2xl font-bold mb-2">Rate Your Experience</h3>
               <p className="text-sm text-slate-400 mb-6">Your feedback helps us improve.</p>
@@ -313,10 +323,10 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                   className="group cursor-pointer"
                   aria-label={`Rate ${starValue} star`}
                 >
-                  <Star 
+                  <Star
                     className={`h-8 w-8 transition-all duration-200 ease-in-out group-hover:scale-110 
-                      ${(hoverRating || rating) >= starValue 
-                        ? 'text-yellow-400 fill-yellow-400' 
+                      ${(hoverRating || rating) >= starValue
+                        ? 'text-yellow-400 fill-yellow-400'
                         : 'text-slate-600'
                       }`
                     }
@@ -362,14 +372,17 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
       {/* Tab Switch Modal */}
       <Dialog open={showAlertModal} onOpenChange={setShowAlertModal}>
-        <DialogContent className="bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-slate-100 border border-slate-700">
+        <DialogContent className="text-slate-100 border border-slate-700"
+          style={{
+            background: 'linear-gradient(to bottom right, #0D1117, #0D1117, #3B0A58)'
+          }}>
           <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold">
+            <DialogTitle className="text-center text-2xl font-bold">
               {alertType === 'tab-switch' ? 'Tab Switch Detected' : 'Window Focus Lost'}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center text-center">
-          <p className="text-sm text-slate-400 mb-6">
+            <p className="text-sm text-slate-400 mb-6">
               {alertType === 'tab-switch'
                 ? 'The user has switched tabs or minimized the browser during the video call.'
                 : 'The user has lost focus on the browser window, possibly by switching to another application or clicking on the taskbar.'
@@ -397,12 +410,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         {/* Video Section */}
         <div className={`flex-1 flex transition-all duration-300 ${isCompilerOpen ? (isChatOpen ? 'w-1/3' : 'w-1/2') : (isChatOpen ? 'w-3/4' : 'w-full')
           }`}>
-           <div className="flex-1 p-4 min-h-0">
+          <div className="flex-1 p-4 min-h-0">
             <div className={`h-full grid gap-4 ${isCompilerOpen ? 'grid-cols-1 grid-rows-2' : 'grid-cols-1 md:grid-cols-2'
               }`}>
               {/* Participant 1 */}
               <div className="relative bg-card rounded-xl overflow-hidden border border-border shadow-lg">
-              <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover bg-black ${(!isVideoOn) ? 'opacity-20' : ''}`} />
+                <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover bg-black ${(!isVideoOn) ? 'opacity-20' : ''}`} />
                 {/* Avatar overlay when local video is off */}
                 {!isVideoOn && (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -432,12 +445,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
 
               {/* Participant 2 */}
               <div className="relative bg-card rounded-xl overflow-hidden border border-border shadow-lg">
-              <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover bg-black ${(!remoteVideoOn) ? 'opacity-20' : ''}`} />
+                <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover bg-black ${(!remoteVideoOn) ? 'opacity-20' : ''}`} />
                 {!remoteJoined && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="text-center px-4">
                       <p className="text-white text-sm md:text-base font-medium">Waiting for {remoteName || 'other participant'} to join…</p>
-                      </div>
+                    </div>
                   </div>
                 )}
                 {/* Avatar overlay when remote video is off */}
@@ -462,21 +475,27 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         {isCompilerOpen && (
           <div className={`transition-all duration-300 border-l border-border ${isChatOpen ? 'w-1/3' : 'w-1/2'
             }`}>
-             <div className="h-full bg-compiler-bg flex flex-col min-h-0">
+            <div className="h-full bg-compiler-bg flex flex-col min-h-0">
               {/* Header */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
-                    <div className="ml-2 inline-flex rounded-md overflow-hidden border border-border">
+                    <div className="ml-2 inline-flex rounded-md overflow-hidden border border-gray-600">
                       <button
-                        className={`px-3 py-1.5 text-sm ${compilerTab === 'editor' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
+                        className={`px-3 py-1.5 text-sm font-medium transition-colors ${compilerTab === 'editor'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#2D333B] text-gray-300 hover:bg-[#353b43]'
+                          }`}
                         onClick={() => { setCompilerTab('editor'); sendSignal({ type: 'compiler:tab', tab: 'editor' }); }}
                       >
                         Editor
                       </button>
                       <button
-                        className={`px-3 py-1.5 text-sm ${compilerTab === 'output' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
+                        className={`px-3 py-1.5 text-sm font-medium transition-colors ${compilerTab === 'output'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#2D333B] text-gray-300 hover:bg-[#353b43]'
+                          }`}
                         onClick={() => { setCompilerTab('output'); sendSignal({ type: 'compiler:tab', tab: 'output' }); }}
                       >
                         Output
@@ -484,8 +503,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    
-                    
+
+
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -495,42 +514,44 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                     onClick={runCodeAndShowOutput}
                     disabled={isRunning || peerRunning}
                   >
-                  {isRunning || peerRunning ? (
+                    {isRunning || peerRunning ? (
                       <Square className="h-4 w-4 mr-2" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
                     )}
                     {(isRunning || peerRunning) ? 'Running...' : 'Run'}
                   </Button>
-                  <select
-                    className="bg-secondary border border-border rounded px-3 py-1 text-sm text-foreground"
-                    value={languageId}
-                    onChange={(e) => {
-                      const nextId = Number(e.target.value);
+                  <Select
+                    value={String(languageId)}
+                    onValueChange={(value) => {
+                      const nextId = Number(value);
                       setLanguageId(nextId);
-                     const found = languages.find(l => l.id === nextId);
+                      const found = languages.find(l => l.id === nextId);
                       const label = found?.name || String(nextId);
-                      // set monaco language locally too
                       setLanguage(judge0NameToMonaco(nextId, label));
-                      // notify peer
                       sendSignal({ type: 'compiler:language', languageId: nextId, label });
-                      // also update starter comment locally
                       setCode((prev) => `// Start coding together in ${label}...\n` + (prev || ''));
                     }}
                   >
-                    {/* options provided by useCompiler hook languages state */}
-                    {Array.isArray(languages) && languages.length > 0 ? (
-                      languages.map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value={63}>JavaScript (Node.js)</option>
-                        <option value={71}>Python (3.8+)</option>
-                        <option value={54}>C++ (GCC)</option>
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-[220px] bg-[#2D333B] border-gray-600 text-gray-200 focus:ring-blue-500">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#2D333B] border-gray-600 text-gray-200">
+                      {Array.isArray(languages) && languages.length > 0 ? (
+                        languages.map((l) => (
+                          <SelectItem key={l.id} value={String(l.id)} className="focus:bg-blue-600 focus:text-white">
+                            {l.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="63" className="focus:bg-blue-600 focus:text-white">JavaScript (Node.js)</SelectItem>
+                          <SelectItem value="71" className="focus:bg-blue-600 focus:text-white">Python (3.8+)</SelectItem>
+                          <SelectItem value="54" className="focus:bg-blue-600 focus:text-white">C++ (GCC)</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -565,11 +586,11 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                       onChange={(e) => setStdin(e.target.value)}
                       className="w-full h-24 bg-slate-900/50 border border-border rounded p-2 mb-3 text-foreground"
                       placeholder="Optional input to pass to the program"
-                    /> 
+                    />
                     <div className="mb-2 font-semibold">Output</div>
                     <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap">
                       {output}
-                   </pre>
+                    </pre>
                   </div>
                 </div>
               </div>
@@ -580,7 +601,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
         {/* Chat Panel */}
         {isChatOpen && (
           <div className={`w-80 transition-all duration-300 border-l border-border`}>
-             <div className="h-full bg-chat-bg flex flex-col min-h-0">
+            <div className="h-full bg-chat-bg flex flex-col min-h-0">
               {/* Header */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
@@ -605,15 +626,29 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                   const isOwn = msg.self;
                   const time = new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                   return (
-                    <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                    <div key={msg.id} className={`flex items-end ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+
                         {!isOwn && (
                           <p className="text-xs text-muted-foreground mb-1 px-3">{remoteName}</p>
                         )}
-                        <div className={`rounded-lg px-3 py-2 ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+
+                        <div
+                          className={`px-3 py-2 ${isOwn
+                              ? 'bg-blue-600 text-white rounded-xl rounded-br-none'
+                              : 'bg-[#2D333B] text-gray-200 rounded-xl rounded-bl-none'
+                            }`}
+                        >
                           <p className="text-sm">{msg.text}</p>
-                          <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{time}</p>
                         </div>
+
+                        <p className={`text-xs mt-1.5 px-3 ${isOwn
+                            ? 'text-gray-400'
+                            : 'text-gray-500'
+                          }`}
+                        >
+                          {time}
+                        </p>
                       </div>
                     </div>
                   );
@@ -629,7 +664,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="Type a message..."
-                      className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-white resize-y focus:outline-none focus:ring-2 focus:ring-primary"
                       rows={2}
                       style={{
                         minHeight: '38px',
@@ -663,7 +698,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
               variant={isMicOn ? "control" : "control-muted"}
               size="control"
               onClick={() => { const next = !isMicOn; setIsMicOn(next); toggleAudio(next); }}
-              className="relative"
+              className="relative bg-transparent border border-gray-600 hover:bg-[#2D333B]"
             >
               {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
             </Button>
@@ -672,6 +707,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
               variant={isVideoOn ? "control" : "control-muted"}
               size="control"
               onClick={() => { const next = !isVideoOn; setIsVideoOn(next); toggleVideo(next); }}
+              className="relative bg-transparent border border-gray-600 hover:bg-[#2D333B]"
             >
               {isVideoOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
             </Button>
@@ -680,6 +716,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
               variant={isChatOpen ? "control-active" : "control"}
               size="control"
               onClick={handleChatToggle}
+              className="relative bg-transparent border border-gray-600 hover:bg-[#2D333B]"
             >
               <MessageSquare className="h-5 w-5" />
             </Button>
@@ -688,6 +725,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
               variant={isCompilerOpen ? "control-active" : "control"}
               size="control"
               onClick={handleCompilerToggle}
+              className="relative bg-transparent border border-gray-600 hover:bg-[#2D333B]"
             >
               <Monitor className="h-5 w-5" />
             </Button>

@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
-      
+
       <div className="min-h-screen pt-16 bg-gradient-to-br from-[#0D1117] to-[#161B22]">
         {/* Header */}
         <div className="bg-[#161B22]/80 backdrop-blur-xl border-b border-[#30363D]/50 sticky top-16 z-30">
@@ -271,7 +271,11 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Card className="bg-gradient-to-br from-[#FF7B72]/10 to-[#DA3633]/10 backdrop-blur-md border-[#FF7B72]/30">
+              <Card className="p-6 rounded-lg" 
+                style={{
+                  border: '1px solid rgba(239, 68, 68, 0.3)', 
+                  backgroundColor: 'rgba(127, 29, 29, 0.2)'    
+                }}>
                 <CardHeader>
                   <CardTitle className="text-red-400 flex items-center text-2xl">
                     <AlertTriangle className="w-6 h-6 mr-3 text-[#FF7B72]" />
@@ -394,7 +398,7 @@ export default function SettingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <FloatingMascot />
     </div>
   )
