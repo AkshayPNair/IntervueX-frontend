@@ -197,7 +197,7 @@ const Feedback = () => {
       if (bookingId) {
         await completeSession({ bookingId });
       }
-      router.push('/interviewer/feedback');
+      router.replace('/interviewer/feedback');
     } catch (e) {
       console.error('Failed to submit feedback', e);
       toast.error('Failed to submit feedback');

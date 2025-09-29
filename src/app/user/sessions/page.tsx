@@ -153,11 +153,24 @@ export default function SessionsPage() {
   const handleCancelConfirm = async () => {
     if (!selectedBooking) return
 
-    if (!cancelReason.trim()) {
+    const trimmedReason = cancelReason.trim()
+
+     if (!trimmedReason) {
       setCancelError('Please provide a reason for cancellation')
       return
     }
-    if (cancelReason.trim().length < 10) {
+    if (/^\d+$/.test(trimmedReason)) {
+      setCancelError('Only numbers are not allowed')
+      return
+    }
+
+    // Check for special characters
+    if (/[^a-zA-Z0-9\s]/.test(trimmedReason)) {
+      setCancelError('Special characters are not allowed')
+      return
+    }
+
+    if (trimmedReason.length < 10) {
       setCancelError('Please provide a more detailed reason (at least 10 characters)')
       return
     }
@@ -167,7 +180,7 @@ export default function SessionsPage() {
     try {
       await cancelSession({
         bookingId: selectedBooking.id,
-        reason: cancelReason.trim()
+        reason: trimmedReason
       })
 
       toast.success('Session cancelled successfully')
@@ -672,7 +685,7 @@ export default function SessionsPage() {
                     <Textarea
                       value={cancelReason}
                       onChange={(e) => {
-                        setCancelReason(e.target.value);
+                        setCancelReason(e.target.value.trim());
                         if (cancelError) setCancelError('');
                       }}
                       placeholder="Please provide a reason for cancelling this session..."

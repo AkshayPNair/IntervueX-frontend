@@ -165,13 +165,19 @@ export const useSlotRule = () => {
     }
 
     // Check if date is in the past
-    const selectedDate = new Date(date);
+    const selectedDate = new Date(`${date}T00:00:00`);
+    selectedDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (selectedDate < today) {
       toast.error('Cannot block past dates');
       return false;
+    }
+
+    if (selectedDate.getTime() === today.getTime()) {
+      toast.error('Cannot block the current day. Exclude specific slots instead.');
+      return false
     }
 
     setBlockedDates(prev => [...prev, date]);
@@ -193,6 +199,31 @@ export const useSlotRule = () => {
     if (!isValidTimeRange(slot.startTime, slot.endTime)) {
       toast.error('Invalid time range');
       return false;
+    }
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(`${date}T00:00:00`);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      toast.error('Cannot exclude slots on past dates');
+      return false;
+    }
+
+    if (selectedDate.getTime() === today.getTime()) {
+      const startDateTime = new Date(`${date}T${slot.startTime}`);
+      const endDateTime = new Date(`${date}T${slot.endTime}`);
+
+      if (endDateTime <= now) {
+        toast.error('Cannot exclude slots that end in the past');
+        return false;
+      }
+
+      if (startDateTime < now) {
+        toast.error('Cannot exclude slots that start in the past');
+        return false;
+      }
     }
     setExcludedSlotsByDate(prev => {
       const list = prev[date] || [];
