@@ -3,6 +3,7 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import nextDynamic from "next/dynamic";
+
 const VideoCall = nextDynamic(() => import("@/components/VideoCall"), {
   ssr: false,
 });
