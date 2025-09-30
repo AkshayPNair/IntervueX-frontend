@@ -56,6 +56,14 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
+        {
+          urls: [
+            'turn:116.68.73.219:3478?transport=udp',
+            'turn:116.68.73.219:3478?transport=tcp'
+          ],
+          username: 'testuser',
+          credential: 'testuser123',
+        },
       ],
     });
 
