@@ -58,8 +58,8 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
         { urls: 'stun:stun.l.google.com:19302' },
         {
           urls: [
-            'turn:116.68.73.219:3478?transport=udp',
-            'turn:116.68.73.219:3478?transport=tcp'
+            'turn:116.68.75.220:3478?transport=udp',
+            'turn:116.68.75.220:3478?transport=tcp'
           ],
           username: 'testuser',
           credential: 'testuser123',
@@ -68,6 +68,7 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
     });
 
     pc.onicecandidate = (e) => {
+      console.log('[webrtc] ICE candidate:', e.candidate?.candidate);
       if (e.candidate && peerId && socketRef.current) {
         console.log('[webrtc] sending ice candidate');
         socketRef.current.emit('signaling:candidate', { 
