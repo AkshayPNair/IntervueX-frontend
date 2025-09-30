@@ -125,6 +125,7 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
   }, []); 
 
   const setupLocalMedia = useCallback(async (pc: RTCPeerConnection) => {
+    if (typeof window === "undefined") return; // prevent server-side execution
     try {
       console.log('[webrtc] setting up local media');
       const stream = await navigator.mediaDevices.getUserMedia({ 
