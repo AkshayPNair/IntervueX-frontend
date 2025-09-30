@@ -2,7 +2,10 @@
 
 import React from "react";
 import { useParams } from "next/navigation";
-import VideoCall from "@/components/VideoCall";
+import nextDynamic from "next/dynamic";
+const VideoCall = nextDynamic(() => import("@/components/VideoCall"), {
+  ssr: false,
+});
 
 export const dynamic = 'force-dynamic';
 
