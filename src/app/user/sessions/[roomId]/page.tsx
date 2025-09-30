@@ -1,4 +1,5 @@
-// frontend/src/app/user/sessions/[roomId]/page.tsx
+'use client'
+
 import React from "react";
 import nextDynamic from "next/dynamic";
 import { useParams } from "next/navigation";
