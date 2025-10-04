@@ -1,5 +1,5 @@
 import api from './api'
-import { CreateBookingData,PaymentMethod,Booking,RazorpayOrder, InterviewerBooking,CancelBookingData, CompleteBookingData} from '../types/booking.types'
+import { CreateBookingData,PaymentMethod,Booking,RazorpayOrder, InterviewerBooking,CancelBookingData, CompleteBookingData, VerifyPaymentData} from '../types/booking.types'
 import { API_ROUTES } from '@/constants/apiRoutes';
 
 export const createBooking = async (bookingData: CreateBookingData): Promise<Booking> => {
@@ -26,6 +26,12 @@ export const createRazorpayOrder = async (amount: number): Promise<RazorpayOrder
     const response = await api.post(API_ROUTES.USER.RAZORPAY_CREATE_ORDER, { amount });
     return response.data;
 };
+
+export const verifyPayment = async (verifyData: VerifyPaymentData): Promise<{ message: string }> => {
+    const response = await api.post(API_ROUTES.USER.RAZORPAY_VERIFY_PAYMENT, verifyData);
+    return response.data;
+};
+
 
 export const getInterviewerBookings=async():Promise<InterviewerBooking[]>=>{
     const response=await api.get(API_ROUTES.INTERVIEWER.BOOKINGS)

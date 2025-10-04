@@ -442,8 +442,6 @@ function OTPPage() {
           </motion.div>
         </div>
       </div>
-
-      <FloatingMascot />
     </div>
   )
 }

@@ -185,8 +185,6 @@ export default function FeedbackDetailPage() {
           </div>
         </div>
       </div>
-      
-      <FloatingMascot />
     </div>
   )
 }

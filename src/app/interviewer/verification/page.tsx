@@ -88,9 +88,9 @@ const InterviewerVerification = () => {
     const handleResumeUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            const allowedTypes = ['application/pdf'];
             if (!allowedTypes.includes(file.type)) {
-                toast.error('Please select a PDF or DOCX file');
+                toast.error('Please select a PDF file');
                 return;
             }
             if (file.size > 10 * 1024 * 1024) {
@@ -750,7 +750,7 @@ const InterviewerVerification = () => {
                                                                 {formData.resumeFile ? formData.resumeFile.name : "Click to upload your resume"}
                                                             </p>
                                                             <p className="text-purple-300 text-sm mt-2">
-                                                                PDF or DOCX files only (max. 10MB)
+                                                            PDF files only (max. 10MB)
                                                             </p>
                                                         </div>
                                                     </div>

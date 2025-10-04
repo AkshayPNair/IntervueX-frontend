@@ -13,8 +13,9 @@ import { useBooking } from "../../../../hooks/useBooking"
 import { useRazorpay } from "../../../../hooks/useRazorpay"
 import { TimeSlot } from "../../../../types/slotRule.types"
 import { getInterviewerById, InterviewerProfile } from "../../../../services/userService"
-import { PaymentMethod } from "../../../../types/booking.types"
+import { PaymentMethod,Booking } from "../../../../types/booking.types"
 import { toast } from 'sonner'
+import { useAuth } from "../../../../hooks/useAuth"
 
 import {
   ArrowLeft,
@@ -33,6 +34,7 @@ import {
 export default function BookSessionPage() {
   const router = useRouter()
   const params = useParams()
+  const { user } = useAuth()
   const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerProfile | null>(null)
   const [interviewerLoading, setInterviewerLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<string>("")
@@ -41,6 +43,7 @@ export default function BookSessionPage() {
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null)
+  const [pendingBooking, setPendingBooking] = useState<Booking | null>(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -60,56 +63,31 @@ export default function BookSessionPage() {
     hourlyRate: selectedInterviewer?.hourlyRate || 0
   })
 
-  // Inside handlePaymentSuccess in page.tsx
-  const handlePaymentSuccess = async (paymentId: string) => {
-    try {
-      if (selectedSlot && selectedDate) {
-        setIsProcessing(true)
-        await bookSession(
-          selectedDate,
-          selectedSlot,
-          PaymentMethod.RAZORPAY,
-          paymentId
-        );
-        toast.success('Booking confirmed successfully!');
-
-        // Redirect to success page with details
-        const qs = new URLSearchParams({
-          date: selectedDate,
-          time: `${selectedSlot.startTime}-${selectedSlot.endTime}`,
-          interviewer: selectedInterviewer?.name || '',
-          amount: String(selectedInterviewer?.hourlyRate || ''),
-          ref: paymentId,
-        }).toString();
-
-        setIsLeaving(true)
-        setTimeout(() => {
-          router.replace(`/user/book-session/success?${qs}`)
-        }, 400)
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to book session');
-    } finally {
-      setIsProcessing(false)
-    }
-  };
-
-
   const handlePaymentError = (error: string) => {
     setIsProcessing(false)
     toast.error(`Payment failed: ${error}`);
   };
 
   const { initiatePayment, loading: razorpayLoading } = useRazorpay({
-    onSuccess: async (paymentId: string) => {
-      // allow overlay to show, then book and animate out
-      try {
-        setIsProcessing(true)
-        await handlePaymentSuccess(paymentId)
-      } finally {
-        setIsProcessing(false)
-      }
-    },
+    onSuccess: async (message: string) => {
+      // Payment verified and booking confirmed
+      toast.success(message);
+      setIsProcessing(false);
+
+      // Redirect to success page
+      const qs = new URLSearchParams({
+        date: selectedDate,
+        time: `${selectedSlot?.startTime}-${selectedSlot?.endTime}`,
+        interviewer: selectedInterviewer?.name || '',
+        amount: String(selectedInterviewer?.hourlyRate || ''),
+        ref: pendingBooking?.id || '',
+      }).toString();
+
+      setIsLeaving(true);
+      setTimeout(() => {
+        router.replace(`/user/book-session/success?${qs}`);
+      }, 400);
+    }, 
     onError: handlePaymentError
   });
 
@@ -1039,14 +1017,29 @@ export default function BookSessionPage() {
                         setIsProcessing(false)
                       }
                     } else if (selectedPaymentMethod === PaymentMethod.RAZORPAY) {
-                      if (selectedInterviewer && selectedInterviewer.hourlyRate) {
-                        setIsProcessing(true)
-                        await initiatePayment(
-                          selectedInterviewer.hourlyRate,
-                          selectedInterviewer.name,
-                          'user@example.com', // Ideally this should come from user profile
-                          `Booking with ${selectedInterviewer.name} on ${new Date(selectedDate).toLocaleDateString()}`
-                        );
+                       if (selectedSlot && selectedDate && selectedInterviewer?.hourlyRate) {
+                        try {
+                          setIsProcessing(true)
+                          // Create pending booking first
+                          const booking = await bookSession(
+                            selectedDate,
+                            selectedSlot,
+                            PaymentMethod.RAZORPAY
+                          );
+                          setPendingBooking(booking);
+
+                          // Then initiate payment
+                          await initiatePayment(
+                            selectedInterviewer.hourlyRate,
+                            selectedInterviewer.name,
+                            user?.email || '',
+                            `Booking with ${selectedInterviewer.name} on ${new Date(selectedDate).toLocaleDateString()}`,
+                            booking.id
+                          );
+                        } catch (err: any) {
+                          toast.error(err.response?.data?.error || 'Failed to initiate payment');
+                          setIsProcessing(false);
+                        }
                       }
                     }
                   }}
@@ -1084,9 +1077,6 @@ export default function BookSessionPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-
-      <FloatingMascot />
     </motion.div>
   )
 }

@@ -4,12 +4,20 @@ import {Inter} from 'next/font/google'
 import { Providers } from "../components/Providers";
 import { SessionProvider } from "../components/SessionProvider";
 import { Toaster } from "sonner";
+import { FloatingMascot } from "../components/ui/floating-mascot";
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: "IntervueX",
   description: "Master your technical interviews",
+  icons: {
+    icon: {
+      url: "/favicon.svg",
+      type: "image/svg+xml",
+    },
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -24,6 +32,7 @@ export default function RootLayout({
           <SessionProvider>
             {children}
             <Toaster/>
+            <FloatingMascot />
             {/* <Toaster 
               position="bottom-right"
               richColors

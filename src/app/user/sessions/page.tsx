@@ -624,8 +624,6 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      <FloatingMascot />
-
       {/* Cancel Session Modal */}
       <AnimatePresence>
         {cancelModalOpen && (

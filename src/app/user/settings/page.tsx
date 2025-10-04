@@ -398,8 +398,6 @@ export default function SettingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <FloatingMascot />
     </div>
   )
 }
