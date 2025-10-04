@@ -57,6 +57,14 @@ export const useAuth=()=>{
     const logout=async()=>{
         await logoutService()
         dispatch(setUser(null))
+        // Clear AI chat messages from localStorage on logout
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.removeItem('intervuex_ai_chat_messages');
+            } catch (error) {
+                console.error('Error clearing AI chat messages on logout:', error);
+            }
+        }
     }
 
     return {login,signup,logout,forgetPassword,resetPassword,googleLogin,selectRole,isLoggedIn:!!user,user}

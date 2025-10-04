@@ -284,8 +284,6 @@ export default function DashboardPage() {
           </AnimatePresence>
         </div>
       </div>
-
-      <FloatingMascot />
     </div>
   )
 }

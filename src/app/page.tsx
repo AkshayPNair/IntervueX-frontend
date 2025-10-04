@@ -33,11 +33,7 @@ export default function Home() {
 
   return (
     <>
-      <Head>
-        <title>IntervueX - Master Your Technical Interviews</title>
-        <meta name="description" content="Practice with experienced interviewers, solve coding challenges in real-time, and get personalized feedback to land your dream job at top tech companies." />
-      </Head>
-
+     
       <div className="min-h-screen relative overflow-hidden bg-gradient-to-r from-[#0D1117] via-[#161B22] to-[#0D1117] bg-gradient-to-r from-[#BC8CFF]/10 via-[#3B0A58]/10 to-[#BC8CFF]/10">
         <Navigation />
         {particles}

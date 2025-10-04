@@ -55,9 +55,9 @@ const Profile = () => {
   const handleResumeUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+      const allowedTypes = ['application/pdf'];
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select a PDF or DOCX file');
+        toast.error('Only PDF files are allowed for resume');
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -259,9 +259,9 @@ const Profile = () => {
       setResumeFile(null);
       
       toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      toast.error("Failed to update profile");
+    } catch (error:any) {
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to update profile";
+      toast.error(errorMessage);
    } finally {
      setSaving(false);
     }
@@ -394,13 +394,13 @@ const Profile = () => {
                   )}
                   <div className="space-y-3">
                   <Label htmlFor="resume" className="text-white font-medium">
-                      {profile?.profile.resume ? 'Update Resume File (PDF/DOCX)' : 'Resume File (PDF/DOCX)'}
+                      {profile?.profile.resume ? 'Update Resume File (PDF)' : 'Resume File (PDF)'}
                     </Label>
                     <div className="relative">
                       <Input
                         id="resume"
                         type="file"
-                        accept=".pdf,.docx,.doc"
+                        accept=".pdf"
                         onChange={handleResumeUpload}
                         className="glass-effect border-purple-400/30 text-white h-12 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600/20 file:text-purple-300 hover:file:bg-purple-600/30 file:transition-colors"
                       />
@@ -414,7 +414,7 @@ const Profile = () => {
                   <div className="glass-card border border-purple-400/20 rounded-lg p-4">
                     <div className="flex items-center text-purple-300 text-sm">
                       <Upload className="w-4 h-4 mr-2" />
-                      <span>Supported formats: PDF, DOC, DOCX (Max size: 10MB)</span>
+                      <span>Supported formats: PDF only (Max size: 10MB)</span>
                     </div>
                   </div>
                 </div>

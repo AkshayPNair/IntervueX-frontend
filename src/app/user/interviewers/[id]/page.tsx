@@ -1,17 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback,AvatarImage } from "@/components/ui/avatar"
-import { Navigation } from "@/components/navigation"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FloatingMascot } from "@/components/ui/floating-mascot"
 import { startOrGetConversation } from "../../../../services/chatService"
-import { getInterviewerById,InterviewerProfile } from "../../../../services/userService"
-import {toast} from 'sonner'
+import { getInterviewerById, getInterviewerRatings, InterviewerProfile } from "../../../../services/userService"
+import { InterviewerRatingData } from "@/types/feedback.types"
+import Paginator from "@/components/ui/paginator"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 import {  
   ArrowLeft,
   Building,
@@ -26,16 +28,24 @@ import {
 export default function InterviewerProfilePage() {
   const router = useRouter()
   const params = useParams()
+  const { user } = useAuth()
   const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerProfile|null>(null)
-  const [showBookingModal, setShowBookingModal] = useState(false)
+  const [ratings, setRatings] = useState<InterviewerRatingData[]>([])
+  const [page, setPage] = useState(1)
   const [loading,setLoading]=useState(false)
+
+  const pageSize = 3
 
   useEffect(() => {
     const fetchInterviewer = async () => {
+      setLoading(true)
       try {
+        setPage(1)
         if (params.id) {
           const interviewer = await getInterviewerById(params.id as string)
+          const interviewerRatings = await getInterviewerRatings(params.id as string)
           setSelectedInterviewer(interviewer)
+          setRatings(interviewerRatings)
         }
       } catch (error) {
         console.error('Error fetching interviewer:', error)
@@ -48,10 +58,36 @@ export default function InterviewerProfilePage() {
     fetchInterviewer()
   }, [params.id])
 
+  const averageRating = ratings.length
+    ? (ratings.reduce((sum, rating) => sum + rating.rating, 0) / ratings.length).toFixed(1)
+    : 'N/A'
+
+
+  const hasRatings = ratings.length > 0
+
+  const pagedRatings = useMemo(() => {
+    if (!hasRatings) return []
+    const startIndex = (page - 1) * pageSize
+    return ratings.slice(startIndex, startIndex + pageSize)
+  }, [ratings, page, pageSize, hasRatings])
+
+  const formatRatingDate = (value: string | Date) => {
+    const parsedDate = new Date(value)
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return '--'
+    }
+
+    return parsedDate.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
-        <Navigation />
         <div className="min-h-screen pt-20 flex items-center justify-center">
           <div className="text-center">
             <div className="text-[#7D8590] text-lg">Loading interviewer profile...</div>
@@ -64,7 +100,6 @@ export default function InterviewerProfilePage() {
   if (!selectedInterviewer) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
-        <Navigation />
         <div className="min-h-screen pt-20 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-[#E6EDF3] mb-4">Interviewer not found</h1>
@@ -79,7 +114,6 @@ export default function InterviewerProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">
-      <Navigation />
       
       <div className="min-h-screen pt-20 px-4">
         <div className="max-w-6xl mx-auto">
@@ -118,10 +152,10 @@ export default function InterviewerProfilePage() {
                       <h1 className="text-3xl font-bold text-[#E6EDF3] mb-2">{selectedInterviewer.name}</h1>
                       <p className="text-xl text-[#BC8CFF] font-semibold mb-2">{selectedInterviewer.jobTitle || 'Software Engineer'}</p>
                       <div className="flex items-center space-x-6">
-                        <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-2">
                           <Star className="w-5 h-5 fill-[#3FB950] text-[#3FB950]" />
-                          <span className="text-[#E6EDF3] font-semibold text-lg">{selectedInterviewer.rating || 4.5}</span>
-                          <span className="text-[#7D8590]">(25 reviews)</span>
+                          <span className="text-[#E6EDF3] font-semibold text-lg">{averageRating}</span>
+                          <span className="text-[#7D8590]">({ratings.length} ratings)</span>
                         </div>
                         <div className="text-2xl font-bold text-[#BC8CFF]">₹ {selectedInterviewer.hourlyRate}/hr</div>
                       </div>
@@ -196,6 +230,71 @@ export default function InterviewerProfilePage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="bg-[#161B22]/80 backdrop-blur-md border-[#30363D] hover:border-[#BC8CFF]/50 transition-all duration-300">
+                <CardHeader>
+                  <CardTitle className="text-[#E6EDF3]">Ratings &amp; reviews</CardTitle>
+                  <p className="text-[#7D8590] text-sm">
+                    Feedback from interviewees who have recently completed sessions
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {hasRatings ? (
+                    <div className="space-y-4">
+                      {pagedRatings.map((rating) => (
+                        <div key={rating.id} className="rounded-lg border border-[#30363D] bg-[#0D1117]/60 p-4">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-1 items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback className="bg-[#161B22] text-[#BC8CFF]">
+                                  {rating.userName?.slice(0, 2).toUpperCase() ?? "NA"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-semibold text-[#E6EDF3]">
+                                  {rating.userName ?? "Anonymous user"}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <Star className="h-4 w-4 fill-[#3FB950] text-[#3FB950]" />
+                                  <span className="text-sm font-medium text-[#E6EDF3]">
+                                    {rating.rating.toFixed(1)} / 5
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-xs text-[#7D8590]">
+                              {formatRatingDate(rating.createdAt)}
+                            </span>
+                          </div>
+                          {rating.comment ? (
+                            <p className="mt-3 text-sm leading-relaxed text-[#7D8590]">
+                              {rating.comment}
+                            </p>
+                          ) : (
+                            <p className="mt-3 text-sm italic text-[#4C566A]">
+                              No written feedback provided
+                            </p>
+                          )}
+                        </div>
+                      ))}
+
+                      <Paginator
+                        page={page}
+                        totalItems={ratings.length}
+                        onPageChange={setPage}
+                        pageSize={pageSize}
+                        className="pt-2 text-white"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-[#30363D] bg-[#0D1117]/50 p-6 text-center">
+                      <p className="text-sm text-[#7D8590]">
+                        Ratings from recent interviewees will appear here once available.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
             {/* Booking Section */}
@@ -212,9 +311,10 @@ export default function InterviewerProfilePage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[#7D8590]">Rating</span>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-2">
                         <Star className="w-4 h-4 fill-[#3FB950] text-[#3FB950]" />
-                        <span className="text-[#E6EDF3] font-semibold">{selectedInterviewer.rating || 4.5}</span>
+                        <span className="text-[#E6EDF3] font-semibold">{averageRating}</span>
+                        <span className="text-xs text-[#7D8590]">({ratings.length})</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
@@ -264,8 +364,6 @@ export default function InterviewerProfilePage() {
           </div>
         </div>
       </div>
-      
-      <FloatingMascot />
     </div>
   )
 }

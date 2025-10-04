@@ -30,7 +30,7 @@ export interface SubmitInterviewerRatingData {
   comment?: string;
 }
 
-export interface InterviewerRatingData{
+export interface InterviewerRatingData {
   rating: number
   comment?: string
   id: string
@@ -38,4 +38,5 @@ export interface InterviewerRatingData{
   interviewerId: string
   userId: string
   createdAt: string | Date
+  userName?: string
 }

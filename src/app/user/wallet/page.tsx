@@ -226,7 +226,6 @@ export default function WalletPage() {
                     </div>
                   )}
       </div>
-      <FloatingMascot />
     </div>
   )
 }

@@ -218,9 +218,10 @@ export default function ProfilePage() {
       } else {
         toast.info('No changes to save')
       }
-    } catch (error) {
+    } catch (error:any) {
       console.error('Error updating profile:', error)
-      toast.error('Failed to update profile')
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to update profile";
+      toast.error(errorMessage);
     } finally {
       setSaving(false)
     }
@@ -469,8 +470,6 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
-      
-      <FloatingMascot />
     </div>
   )
 }

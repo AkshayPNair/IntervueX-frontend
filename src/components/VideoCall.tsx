@@ -580,13 +580,6 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId: _roomId }) => {
                     </div>
                   </div>
                   <div className="p-4 flex-1 overflow-y-auto">
-                    <div className="mb-2 font-semibold">Program Input (stdin)</div>
-                    <textarea
-                      value={stdin}
-                      onChange={(e) => setStdin(e.target.value)}
-                      className="w-full h-24 bg-slate-900/50 border border-border rounded p-2 mb-3 text-foreground"
-                      placeholder="Optional input to pass to the program"
-                    />
                     <div className="mb-2 font-semibold">Output</div>
                     <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap">
                       {output}

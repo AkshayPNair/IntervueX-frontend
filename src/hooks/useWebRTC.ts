@@ -58,10 +58,10 @@ export function useWebRTC(roomId: string, signalingUrl: string) {
         { urls: 'stun:stun.l.google.com:19302' },
         {
           urls: [
-            'turn:116.68.75.220:3478?transport=udp',
-            'turn:116.68.75.220:3478?transport=tcp'
+            'turn:13.203.214.125:3478?transport=udp',
+            'turn:13.203.214.125:3478?transport=tcp'
           ],
-          username: 'testuser',
+          username: 'testuser',       
           credential: 'testuser123',
         },
       ],

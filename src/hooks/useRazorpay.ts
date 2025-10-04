@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { loadRazorpayScript } from "../utils/loadRazorpay";
-import { createRazorpayOrder } from "../services/bookingService";
+import { createRazorpayOrder, verifyPayment } from "../services/bookingService";
 
-interface UseRazorpayProps{
-    onSuccess:(paymentId:string)=>void
-    onError:(error:string)=>void
+interface UseRazorpayProps {
+  onSuccess: (message: string) => void
+  onError: (error: string) => void
 }
 
-interface UseRazorpayReturn{
-    initiatePayment:(amount:number, name:string, email:string,description:string)=>Promise<void>
-    loading:boolean;
-    error:string|null
+interface UseRazorpayReturn {
+  initiatePayment: (amount: number, name: string, email: string, description: string, bookingId: string) => Promise<void>
+  loading: boolean;
+  error: string | null
 }
 
-export const useRazorpay = ({ onSuccess, onError }: UseRazorpayProps): UseRazorpayReturn => {
+export const useRazorpay = ({onSuccess, onError }: UseRazorpayProps): UseRazorpayReturn => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +21,8 @@ export const useRazorpay = ({ onSuccess, onError }: UseRazorpayProps): UseRazorp
     amount: number,
     name: string,
     email: string,
-    description: string
+    description: string,
+    bookingId: string
   ): Promise<void> => {
     try {
       setLoading(true);
@@ -44,8 +45,21 @@ export const useRazorpay = ({ onSuccess, onError }: UseRazorpayProps): UseRazorp
         name: 'IntervueX',
         description: description,
         order_id: order.id,
-        handler: function (response: any) {
-          onSuccess(response.razorpay_payment_id);
+        handler: async function (response: any) {
+          try {
+            // Verify payment on backend
+            const verifyData = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingId: bookingId
+            };
+            const result = await verifyPayment(verifyData);
+            onSuccess(result.message);
+          } catch (verifyError: any) {
+            console.error('Payment verification failed:', verifyError);
+            onError(verifyError.response?.data?.error || 'Payment verification failed');
+          }
         },
         prefill: {
           name: name,
@@ -55,7 +69,7 @@ export const useRazorpay = ({ onSuccess, onError }: UseRazorpayProps): UseRazorp
           color: '#BC8CFF',
         },
         modal: {
-         ondismiss: function () {
+          ondismiss: function () {
             onError('Payment cancelled');
           },
         },
@@ -71,7 +85,7 @@ export const useRazorpay = ({ onSuccess, onError }: UseRazorpayProps): UseRazorp
     }
   };
 
- return {
+  return {
     initiatePayment,
     loading,
     error,

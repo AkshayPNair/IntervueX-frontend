@@ -1,5 +1,5 @@
 import api from './api'
-import { FeedbackResponseData, SubmitInterviewerRatingData } from '@/types/feedback.types';
+import { FeedbackResponseData, InterviewerRatingData,SubmitInterviewerRatingData } from '@/types/feedback.types';
 import { UserDashboardResponse } from '@/types/dashboard.types';
 import { PaymentHistoryResponse } from '@/types/payment.types';
 import { ChangePasswordData } from '@/types/auth.types';
@@ -74,6 +74,11 @@ export const getAllInterviewers = async (): Promise<InterviewerProfile[]> => {
 
 export const getInterviewerById = async (id: string): Promise<InterviewerProfile> => {
   const response = await api.get(API_ROUTES.USER.INTERVIEWER_BY_ID(id));
+  return response.data;
+};
+
+export const getInterviewerRatings = async (id: string): Promise<InterviewerRatingData[]> => {
+  const response = await api.get(API_ROUTES.USER.INTERVIEWER_RATINGS(id));
   return response.data;
 };
 
