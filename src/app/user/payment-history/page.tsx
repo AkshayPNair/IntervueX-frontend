@@ -79,8 +79,8 @@ export default function PaymentHistoryPage() {
               transition={{ duration: 0.5 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="bg-gradient-to-br from-[#BC8CFF]/20 via-[#3B0A58]/20 to-[#BC8CFF]/20 backdrop-blur-md border-[#BC8CFF]/30 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#BC8CFF]/10 to-[#3B0A58]/10" />
+              <Card className="backdrop-blur-md border-[#BC8CFF]/30 overflow-hidden relative" style={{ background: 'linear-gradient(to bottom right, rgba(188, 140, 255, 0.2), rgba(59, 10, 88, 0.2), rgba(188, 140, 255, 0.2))' }}>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, rgba(188, 140, 255, 0.1), rgba(59, 10, 88, 0.1))' }} />
                 <CardContent className="p-8 relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-14 h-14 bg-[#BC8CFF]/20 rounded-2xl flex items-center justify-center border border-[#BC8CFF]/40">
@@ -102,8 +102,8 @@ export default function PaymentHistoryPage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="bg-gradient-to-br from-[#3FB950]/20 via-[#2EA043]/20 to-[#3FB950]/20 backdrop-blur-md border-[#3FB950]/30 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3FB950]/10 to-[#2EA043]/10" />
+              <Card className="backdrop-blur-md border-[#3FB950]/30 overflow-hidden relative" style={{ background: 'linear-gradient(to bottom right, rgba(59, 185, 80, 0.2), rgba(46, 160, 67, 0.2), rgba(59, 185, 80, 0.2))' }}>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, rgba(59, 185, 80, 0.1), rgba(46, 160, 67, 0.1))' }} />
                 <CardContent className="p-8 relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-14 h-14 bg-[#3FB950]/20 rounded-2xl flex items-center justify-center border border-[#3FB950]/40">
@@ -125,11 +125,12 @@ export default function PaymentHistoryPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="bg-gradient-to-br from-[#FF7B72]/20 via-[#F85149]/20 to-[#FF7B72]/20 backdrop-blur-md border-[#FF7B72]/30 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#FF7B72]/10 to-[#F85149]/10" />
+              <Card className="backdrop-blur-md border-[#FF7B72]/30 overflow-hidden relative" style={{ background: 'linear-gradient(to bottom right, rgba(255, 123, 114, 0.2), rgba(248, 81, 73, 0.2), rgba(255, 123, 114, 0.2))' }}>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, rgba(255, 123, 114, 0.1), rgba(248, 81, 73, 0.1))' }} />
                 <CardContent className="p-8 relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-[#FF7B72]/20 rounded-2xl flex items-center justify-center border border-[#FF7B72]/40">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center border border-[#FF7B72]/40"
+                      style={{ backgroundColor: 'rgba(255, 123, 114, 0.2)' }}>
                       <XCircle className="w-7 h-7 text-[#FF7B72]" />
                     </div>
                     
