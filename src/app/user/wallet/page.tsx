@@ -82,11 +82,14 @@ export default function WalletPage() {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <Card className="bg-gradient-to-br from-[#BC8CFF]/20 via-[#3B0A58]/20 to-[#BC8CFF]/20 backdrop-blur-md border-[#BC8CFF]/30 overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#BC8CFF]/10 to-[#3B0A58]/10" />
+            <Card  
+                className="backdrop-blur-md border-[#BC8CFF]/30 overflow-hidden relative"
+                style={{ background: 'linear-gradient(to bottom right, rgba(188, 140, 255, 0.2), rgba(59, 10, 88, 0.2), rgba(188, 140, 255, 0.2))' }}
+             >
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, rgba(188, 140, 255, 0.1), rgba(59, 10, 88, 0.1))' }} />
               <CardContent className="p-12 relative z-10 text-center">
                 <div className="flex items-center justify-center mb-6">
-                  <div className="w-16 h-16 bg-[#BC8CFF]/20 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(188, 140, 255, 0.2)'}}>
                     <Wallet className="w-8 h-8 text-[#BC8CFF]" />
                   </div>
                 </div>
