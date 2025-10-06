@@ -10,7 +10,7 @@ interface UseAdminWallet{
     refetch:()=>Promise<void>
 }
 
-export const useAdminWallet=():UseAdminWallet=>{
+export const useAdminWallet=(searchQuery?: string):UseAdminWallet=>{
     const [summary, setSummary] = useState<WalletSummary>({ balance: 0, totalCredits: 0, totalDebits: 0 });
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -22,7 +22,7 @@ export const useAdminWallet=():UseAdminWallet=>{
         try {
           const [summary, transaction] = await Promise.all([
             getAdminWalletSummary(),
-            getAdminWalletTransactions()
+            getAdminWalletTransactions(searchQuery)
           ]);
           setSummary(summary);
           setTransactions(transaction);
@@ -33,9 +33,9 @@ export const useAdminWallet=():UseAdminWallet=>{
         }
       };
     
-      useEffect(() => { 
+      useEffect(() => {
         fetchAll()
-    }, []);
+    }, [searchQuery]);
     
       return { summary, transactions, loading, error, refetch: fetchAll };
 }

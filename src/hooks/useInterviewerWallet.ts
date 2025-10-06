@@ -24,9 +24,12 @@ export const useInterviewerWallet = (): UseInterviewerWallet => {
                 getInterviewerWalletSummary(),
                 getInterviewerWalletTransactions()
             ])
+            console.log('Interviewer wallet summary:', summary)
+            console.log('Interviewer wallet transactions:', transaction)
             setSummary(summary)
-            setTransactions(transaction)
+            setTransactions(Array.isArray(transaction) ? transaction : [])
         } catch (error: any) {
+            console.error('Error loading interviewer wallet:', error)
             setError(error?.response?.data?.error || 'Failed to load wallet');
         } finally {
             setLoading(false)

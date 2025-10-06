@@ -66,6 +66,7 @@ export const API_ROUTES = {
     PENDING_INTERVIEWERS: '/admin/interviewer/pending',
     APPROVE_INTERVIEWER: (interviewerId: string) => `/admin/interviewer/approve/${interviewerId}`,
     REJECT_INTERVIEWER: (interviewerId: string) => `/admin/interviewer/reject/${interviewerId}`,
+    INTERVIEWER_RESUME: (userId: string) => `/admin/interviewer/resume/${userId}`,
     DASHBOARD: '/admin/dashboard',
     SESSIONS: '/admin/sessions',
     WALLET_SUMMARY: '/admin/wallet/summary',

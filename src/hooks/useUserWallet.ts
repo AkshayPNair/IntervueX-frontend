@@ -24,8 +24,8 @@ export const UseUserWallet = (): UseUserWallet => {
                 getUserWalletSummary(),
                 getUserWalletTransactions()
             ])
-            setSummary(summary),
-                setTransactions(transaction)
+            setSummary(summary)
+            setTransactions(Array.isArray(transaction) ? transaction : [])
         } catch (error: any) {
             setError(error?.response?.data?.error || 'Failed to load wallet');
         } finally {

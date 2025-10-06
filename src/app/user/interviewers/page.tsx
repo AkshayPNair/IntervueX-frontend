@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { FloatingMascot } from "@/components/ui/floating-mascot"
 import { getAllInterviewers, InterviewerProfile } from "../../../services/userService"
+import { useDebounce } from "../../../hooks/useDebounce"
 import Paginator from "../../../components/ui/paginator"
 import { toast } from 'sonner'
 import {
@@ -49,6 +49,7 @@ export default function InterviewersPage() {
   const [loading, setLoading] = useState(true)
   const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerProfile | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
     rating: [0, 5],
@@ -63,33 +64,42 @@ export default function InterviewersPage() {
     )
   ).sort()
 
-  useEffect(() => {
-    const fetchInterviewers = async () => {
-      try {
-        const data = await getAllInterviewers()
-        setInterviewers(data)
-        
-        // Set initial filter ranges based on data
-        if (data.length > 0) {
-          const rates = data.map(i => i.hourlyRate || 0)
-          const minRate = Math.min(...rates)
-          const maxRate = Math.max(...rates)
-          
-          setFilters(prev => ({
-            ...prev,
-            hourlyRate: [minRate, maxRate]
-          }))
-        }
-      } catch (error) {
-        console.error('Error fetching interviewers:', error)
-        toast.error('Failed to load interviewers')
-      } finally {
-        setLoading(false)
-      }
-    }
+  const fetchInterviewers = useCallback(async (searchQuery?: string) => {
+    try {
+      setLoading(true)
+      const data = await getAllInterviewers(searchQuery)
+      setInterviewers(data)
 
-    fetchInterviewers()
+      // Set initial filter ranges based on data
+      if (data.length > 0) {
+        const rates = data.map(i => i.hourlyRate || 0)
+        const minRate = Math.min(...rates)
+        const maxRate = Math.max(...rates)
+
+        setFilters(prev => ({
+          ...prev,
+          hourlyRate: [minRate, maxRate]
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching interviewers:', error)
+      toast.error('Failed to load interviewers')
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchInterviewers()
+  }, [fetchInterviewers])
+
+  useEffect(() => {
+    if (debouncedSearchQuery !== "") {
+      fetchInterviewers(debouncedSearchQuery)
+    } else {
+      fetchInterviewers()
+    }
+  }, [debouncedSearchQuery, fetchInterviewers])
 
   const applyFilters = (interviewer: InterviewerProfile) => {
     // Rating filter
@@ -121,20 +131,13 @@ export default function InterviewersPage() {
   }
 
   const filteredInterviewers = useMemo(() => {
-    const query = searchQuery.toLowerCase();
-    return interviewers
-      .filter(applyFilters)
-      .filter(interviewer => (
-        interviewer.name.toLowerCase().includes(query) ||
-        interviewer.jobTitle?.toLowerCase().includes(query) ||
-        interviewer.technicalSkills?.some(skill => skill.toLowerCase().includes(query))
-      ));
-  }, [interviewers, searchQuery, filters]);
+    return interviewers.filter(applyFilters);
+  }, [interviewers, filters]);
 
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  useEffect(() => { setPage(1); }, [searchQuery, filters, interviewers]);
+  useEffect(() => { setPage(1); }, [debouncedSearchQuery, filters, interviewers]);
   const totalItems = filteredInterviewers.length;
   const pagedInterviewers = useMemo(() => {
     const start = (page - 1) * pageSize;

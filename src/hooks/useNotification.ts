@@ -5,6 +5,7 @@ import { getNotificationSocket } from '@/services/notificationSocket'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
 import { toast } from 'sonner'
+import { useAuth } from './useAuth'
 
 // Centralized event names to mirror backend NotifyEvents
 export const NotifyEvents = {
@@ -14,6 +15,8 @@ export const NotifyEvents = {
   WalletCredit: 'notify:wallet-credit',
   WalletDebit: 'notify:wallet-debit',
   NewRegistration: 'notify:new-registration',
+  UserBlocked: 'notify:user-blocked',
+  UserUnblocked: 'notify:user-unblocked',
 } as const
 
 type NotifyEventName = typeof NotifyEvents[keyof typeof NotifyEvents]
@@ -24,6 +27,7 @@ type Listener = (payload: any) => void
 
 export function useNotifications() {
   const user = useSelector((state: RootState) => state.auth.user)
+  const { logout } = useAuth()
   const socketRef = useRef<ReturnType<typeof getNotificationSocket> | null>(null)
 
   useEffect(() => {
@@ -94,12 +98,23 @@ export function useNotifications() {
       }
     }
 
+    const onUserBlocked: Listener = async (p) => {
+      await logout()
+      toast.error(p.message || 'Your account has been blocked by an administrator.')
+    }
+
+    const onUserUnblocked: Listener = (p) => {
+      toast.success(p.message || 'Your account has been unblocked by an administrator.')
+    }
+
     on(NotifyEvents.SessionBooked, onSessionBooked)
     on(NotifyEvents.FeedbackSubmitted, onFeedbackSubmitted)
     on(NotifyEvents.RatingSubmitted, onRatingSubmitted)
     on(NotifyEvents.WalletCredit, onWalletCredit)
     on(NotifyEvents.WalletDebit, onWalletDebit)
     on(NotifyEvents.NewRegistration, onNewRegistration)
+    on(NotifyEvents.UserBlocked, onUserBlocked)
+    on(NotifyEvents.UserUnblocked, onUserUnblocked)
 
     return () => {
       off(NotifyEvents.SessionBooked, onSessionBooked)
@@ -108,6 +123,8 @@ export function useNotifications() {
       off(NotifyEvents.WalletCredit, onWalletCredit)
       off(NotifyEvents.WalletDebit, onWalletDebit)
       off(NotifyEvents.NewRegistration, onNewRegistration)
+      off(NotifyEvents.UserBlocked, onUserBlocked)
+      off(NotifyEvents.UserUnblocked, onUserUnblocked)
       socket.emit('notify:leave', { role, userId })
     }
   }, [user])

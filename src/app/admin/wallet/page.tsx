@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ReusableTable, TableColumn } from '@/components/ui/ReusableTable';
 import { useAdminWallet } from '@/hooks/useAdminWallet';
+import { useDebounce } from '@/hooks/useDebounce';
 import { WalletTransaction } from '@/types/wallet.types';
 import Paginator from "../../../components/ui/paginator";
 import {
@@ -11,8 +12,6 @@ import {
   TrendingUp,
   DollarSign,
   Search,
-  Filter,
-  Download,
   Calendar,
   CreditCard,
   ArrowUpRight,
@@ -70,12 +69,15 @@ const itemVariants = {
 };
 
 export default function Wallet() {
-  const { summary, transactions, loading, error } = useAdminWallet();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [dateFilter, setDateFilter] = useState<string>('All');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [page, setPage] = useState(1);
   const pageSize = 6;
+  const { summary, transactions, loading, error} = useAdminWallet(debouncedSearch);
+  
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   // Calculate totals
   const totalEarnings =transactions
@@ -95,23 +97,7 @@ export default function Wallet() {
     .filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth())
     .reduce((sum, t) => sum + (t.adminFee || 0), 0);
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter(transaction => {
-      const userName = getUserName(transaction);
-      const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.bookingId?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'All' ||
-        (statusFilter === 'Credit' && transaction.type === 'credit') ||
-        (statusFilter === 'Debit' && transaction.type === 'debit');
-      return matchesSearch && matchesStatus;
-    });
-  }, [transactions, searchTerm, statusFilter]);
 
-  const pagedTransactions = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredTransactions.slice(start, start + pageSize);
-  }, [filteredTransactions, page]);
 
   const getStatusColor = (status: string) => {
     return status === 'Credit'
@@ -176,10 +162,6 @@ export default function Wallet() {
               >
                 {loading ? "—" : formatCurrency(totalEarnings)}
               </motion.p>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <span className="text-sm text-gray-300">Total Amount: <span className="font-semibold text-white">₹{totalAmount.toLocaleString('en-IN')}</span></span>
-                <span className="text-sm text-gray-300">Commission: <span className="font-semibold text-yellow-400">₹{totalCommission.toLocaleString('en-IN')}</span></span>
-              </div>
               <div className="flex items-center space-x-2">
                 <span className="text-green-400 text-sm font-medium">↗ +12.5%</span>
                 <span className="text-gray-400 text-sm">from last month</span>
@@ -217,10 +199,7 @@ export default function Wallet() {
               >
                 ₹{thisMonthEarnings.toLocaleString('en-IN')}
               </motion.p>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <span className="text-sm text-gray-300">Amount: <span className="font-semibold text-white">₹{thisMonthAmount.toLocaleString('en-IN')}</span></span>
-                <span className="text-sm text-gray-300">Commission: <span className="font-semibold text-yellow-400">₹{thisMonthCommission.toLocaleString('en-IN')}</span></span>
-              </div>
+              
               <div className="flex items-center space-x-2">
                 <span className="text-blue-400 text-sm font-medium">January 2024</span>
                 <span className="text-gray-400 text-sm">• {transactions.filter(t => new Date(t.createdAt).getMonth() === new Date().getMonth()).length} transactions</span>
@@ -230,46 +209,21 @@ export default function Wallet() {
         </motion.div>
       </motion.div>
 
-      {/* Filters */}
+      {/* Search */}
       <motion.div
         className="glass-card rounded-xl p-6"
         variants={itemVariants}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
-            <motion.input
-              type="text"
-              placeholder="Search transactions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 input-glow rounded-lg text-white placeholder-gray-400 focus:outline-none text-lg"
-              whileFocus={{ scale: 1.02 }}
-            />
-          </div>
-
-          <motion.select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
+        <div className="relative max-w-8xl">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+          <motion.input
+            type="text"
+            placeholder="Search transactions by user name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 input-glow rounded-lg text-white placeholder-gray-400 focus:outline-none text-lg"
             whileFocus={{ scale: 1.02 }}
-          >
-            <option value="All">All Status</option>
-            <option value="Credit">Credit</option>
-            <option value="Debit">Debit</option>
-          </motion.select>
-
-          <motion.select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
-            whileFocus={{ scale: 1.02 }}
-          >
-            <option value="All">All Time</option>
-            <option value="Today">Today</option>
-            <option value="Week">This Week</option>
-            <option value="Month">This Month</option>
-          </motion.select>
+          />
         </div>
       </motion.div>
 
@@ -282,7 +236,6 @@ export default function Wallet() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold text-white">Transaction History</h2>
             <div className="flex items-center space-x-4">
-            <span className="text-gray-500">• Page {page} of {Math.max(1, Math.ceil(filteredTransactions.length / pageSize))}</span>
               <motion.button
                 className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.1 }}
@@ -304,8 +257,9 @@ export default function Wallet() {
           </div>
         ) : (() => {
           const INR = (v: number) => `₹${v.toLocaleString('en-IN')}`;
-          type Row = typeof filteredTransactions[0] & { seq: number };
-          const tableData: Row[] = pagedTransactions.map((t, i) => ({ ...t, seq: ((page - 1) * pageSize) + i + 1 }));
+          type Row = typeof transactions[0] & { seq: number };
+          const paginatedTransactions = transactions.slice((page - 1) * pageSize, page * pageSize);
+          const tableData: Row[] = paginatedTransactions.map((t, i) => ({ ...t, seq: ((page - 1) * pageSize) + i + 1 }));
 
           const columns: TableColumn<Row>[] = [
             {

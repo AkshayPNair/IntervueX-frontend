@@ -10,7 +10,7 @@ interface useInterviewerBookingsReturn{
 
 }
 
-export const useInterviewerBookings=(): useInterviewerBookingsReturn =>{
+export const useInterviewerBookings=(search?:string): useInterviewerBookingsReturn =>{
     const [bookings,setBookings]=useState<InterviewerBooking[]>([])
     const [loading,setLoading]=useState<boolean>(true)
     const [error,setError]=useState<string|null>(null)
@@ -20,7 +20,7 @@ export const useInterviewerBookings=(): useInterviewerBookingsReturn =>{
         setError(null)
 
         try {
-            const response= await getInterviewerBookings()
+            const response= await getInterviewerBookings(search)
             setBookings(response)
         } catch (err:any) {
             console.error('Error fetching bookings:', err);
@@ -32,7 +32,7 @@ export const useInterviewerBookings=(): useInterviewerBookingsReturn =>{
 
     useEffect(()=>{
         fetchBookings()
-    },[])
+    },[search])
     
     return{
         bookings,

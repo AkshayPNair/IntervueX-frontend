@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { fetchPendingInterviewers, approveInterviewer, rejectInterviewer, fetchAllUsers } from '@/services/adminService';
+import { fetchPendingInterviewers, approveInterviewer,getInterviewerResumeUrl, rejectInterviewer, fetchAllUsers } from '@/services/adminService';
+import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner'
 import Paginator from '@/components/ui/paginator'
 import {
@@ -71,6 +72,7 @@ const itemVariants = {
 export default function InterviewRequests() {
   const [applications, setApplications] = useState<InterviewerApplication[]>([]);
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -86,52 +88,55 @@ export default function InterviewRequests() {
   const [applicationToReject, setApplicationToReject] = useState<string | null>(null);
   const [isConfirmingReject, setIsConfirmingReject] = useState(false);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
   useEffect(() => {
     loadingPendingInterviewers();
   }, [])
 
-  const loadingPendingInterviewers = async () => {
+  useEffect(() => {
+    loadingPendingInterviewers(debouncedSearchTerm);
+  }, [debouncedSearchTerm])
+
+  const loadingPendingInterviewers = async (searchQuery?: string) => {
     try {
       setLoading(true)
-      const [pendingData, allUsersData] = await Promise.all([
-        fetchPendingInterviewers(),
-        fetchAllUsers()
-      ])
+      setError(null); // Clear previous errors
+      const pendingData = await fetchPendingInterviewers(searchQuery);
 
-      const interviewers = allUsersData.filter((user: any) => user.role === 'interviewer' || user.role === 'Interviewer')
-      const approved = interviewers.filter((user: any) => user.isApproved).length
-      const total = interviewers.length
-      const rejected = Math.max(0, total - approved - pendingData.length)
+      // Only fetch counts on initial load (when no searchQuery)
+      if (!searchQuery) {
+        const allUsersData = await fetchAllUsers();
+        const interviewers = allUsersData.users.filter((user: any) => user.role === 'interviewer' || user.role === 'Interviewer')
+        const approved = interviewers.filter((user: any) => user.isApproved).length
+        const total = interviewers.length
+        const rejected = Math.max(0, total - approved - pendingData.length)
+
+        setApprovedCount(approved)
+        setRejectedCount(rejected)
+        setTotalApplicationCount(total)
+      }
 
       setApplications(pendingData)
-      setApprovedCount(approved)
-      setRejectedCount(rejected)
-      setTotalApplicationCount(total)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching pending interviewers : ", error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'An unexpected error occurred';
+      setError(errorMessage);
       toast.error('Failed to load pending interviewers')
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (app.profile?.jobTitle && app.profile.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()))
-
-    return matchesSearch;
-  });
-
   // Pagination (same style as admin user listing)
   const [page, setPage] = useState(1);
   const pageSize = 3;
-  useEffect(() => { setPage(1); }, [searchTerm, applications]);
-  const totalItems = filteredApplications.length;
+  useEffect(() => { setPage(1); }, [applications]);
+  const totalItems = applications.length;
   const pagedApplications = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return filteredApplications.slice(start, start + pageSize);
-  }, [filteredApplications, page, pageSize]);
+    return applications.slice(start, start + pageSize);
+  }, [applications, page, pageSize]);
 
   const handleApprove = async (applicationId: string) => {
     try {
@@ -203,10 +208,20 @@ export default function InterviewRequests() {
     setShowProfile(true);
   };
 
-  const handleViewResume = (application: InterviewerApplication) => {
-    setSelectedApplication(application);
-    setShowResume(true);
-  };
+ const handleViewResume = async (resumeUrl: string | undefined, userId: string) => {
+    if (!resumeUrl) {
+      toast.error('No resume available');
+      return;
+    }
+
+   try {
+      const signedUrl = await getInterviewerResumeUrl(userId);
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error opening resume:', error);
+      toast.error('Unable to open resume. Please try again.');
+    }
+  } 
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -355,6 +370,24 @@ export default function InterviewRequests() {
         </div>
       </motion.div>
 
+      {/* Error Display */}
+      {error && (
+        <motion.div
+          className="glass-card rounded-xl p-4 border border-red-500/20"
+          variants={itemVariants}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-3">
+            <XCircle className="w-5 h-5 text-red-400" />
+            <div>
+              <p className="text-red-400 font-medium">Error Loading Applications</p>
+              <p className="text-gray-300 text-sm">{error}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Applications List */}
       <motion.div
         className="space-y-4"
@@ -364,7 +397,7 @@ export default function InterviewRequests() {
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
           </div>
-        ) : filteredApplications.length === 0 ? (
+        ) : applications.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <User className="w-12 h-12 text-white" />
@@ -446,14 +479,13 @@ export default function InterviewRequests() {
                       {application.profile?.resume ? (
                         <div>
                           <p className="text-white font-medium text-sm">Resume uploaded</p>
-                          <a
-                            href={application.profile.resume}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleViewResume(application.profile?.resume, application.id)}
                             className="text-blue-400 text-sm hover:underline"
                           >
                             View Resume
-                          </a>
+                            </button>
                         </div>
                       ) : (
                         <p className="text-gray-400 text-sm">No resume uploaded</p>
@@ -670,7 +702,7 @@ export default function InterviewRequests() {
                       </div>
                       <div className="flex space-x-2">
                         <motion.button
-                          onClick={() => window.open(selectedApplication.profile?.resume, '_blank')}
+                         onClick={() => handleViewResume(selectedApplication.profile?.resume, selectedApplication.id)}
                           className="glow-button text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -679,7 +711,7 @@ export default function InterviewRequests() {
                           <span>View</span>
                         </motion.button>
                         <motion.button
-                          onClick={() => window.open(selectedApplication.profile?.resume, '_blank')}
+                          onClick={() => handleViewResume(selectedApplication.profile?.resume, selectedApplication.id)}
                           className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:from-blue-600 hover:to-cyan-600 transition-all"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -941,3 +973,4 @@ export default function InterviewRequests() {
     </motion.div>
   );
 }
+
