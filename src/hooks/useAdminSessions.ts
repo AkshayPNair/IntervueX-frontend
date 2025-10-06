@@ -2,27 +2,26 @@ import { useEffect, useState } from 'react';
 import { getAdminSessions } from '../services/adminService';
 import type { AdminBookingList } from '../types/booking.types';
 
-export const useAdminSessions = () => {
+export const useAdminSessions = (searchQuery?: string, page?: number, pageSize?: number) => {
   const [sessions, setSessions] = useState<AdminBookingList[]>([]);
+  const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  useEffect(() => {
     setLoading(true);
     setError(null);
-    try {
-      const data = await getAdminSessions();
-      setSessions(data);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load sessions');
-    } finally {
-      setLoading(false);
-    }
-  };
+    getAdminSessions(searchQuery, page, pageSize)
+      .then((data: { sessions: AdminBookingList[], total: number }) => {
+        setSessions(data.sessions);
+        setTotal(data.total);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message || 'Failed to load sessions');
+        setLoading(false);
+      });
+  }, [searchQuery, page, pageSize]);
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  return { sessions, loading, error, reload: load };
+  return { sessions, total, loading, error };
 };

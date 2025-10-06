@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { ReusableTable, TableColumn } from '../../../components/ui/ReusableTable';
 import Paginator from '../../../components/ui/paginator';
 import { useAdminUsers } from '../../../hooks/useAdminUsers';
+import { useDebounce } from '../../../hooks/useDebounce';
 import { blockUser, unblockUser } from '../../../services/adminService';
 import { toast } from 'sonner';
 
@@ -42,50 +43,23 @@ const itemVariants = {
 };
 
 export default function UserManagement() {
-  const { users, loading, error } = useAdminUsers();
-  const [localUsers, setLocalUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 6;
+  const { users, total, loading, error, refetch } = useAdminUsers(debouncedSearchTerm, roleFilter, statusFilter, page, pageSize);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (users.length > 0) {
-      setLocalUsers(users);
-    }
-  }, [users]);
-
-  // Filter out Admins from the user list
-  const filteredUsers = useMemo(() => {
-    const list = localUsers
-      .filter(user => user.role !== 'Admin' && user.role !== 'admin')
-      .filter(user => {
-        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const userRoleForFilter = user.role === 'user' ? 'Candidate' : user.role;
-        const matchesRole = roleFilter === 'All' || userRoleForFilter === roleFilter;
-        const matchesStatus = statusFilter === 'All' || user.isBlocked === (statusFilter === 'Blocked');
-        return matchesSearch && matchesRole && matchesStatus;
-      });
-    // reset to page 1 when filters/search change
     setPage(1);
-    return list;
-  }, [localUsers, searchTerm, roleFilter, statusFilter]);
-
-  // current page slice
-  const totalItems = filteredUsers.length;
-  const pagedUsers = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, page, pageSize]);
+  }, [debouncedSearchTerm, roleFilter, statusFilter]);
 
   const handleToggleStatus = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const targetUser = localUsers.find(user => user.id === userId);
+      const targetUser = users.find(user => user.id === userId);
       if (targetUser && !targetUser.isBlocked) {
         await blockUser(userId);
         toast.success(`User blocked successfully`);
@@ -93,12 +67,8 @@ export default function UserManagement() {
         await unblockUser(userId);
         toast.success(`User unblocked successfully`);
       }
-      setLocalUsers(users =>
-        users.map(user =>
-          user.id === userId ? { ...user, isBlocked: !user.isBlocked } : user
-        )
-      )
-     
+      // Refetch the users list to update the UI immediately
+      await refetch();
     } catch (error) {
       toast.error('Failed to update user status');
     } finally {
@@ -130,7 +100,7 @@ export default function UserManagement() {
         // If user.role is 'user', show badge as 'Candidate'
         let badgeText = '';
         let badgeClass = '';
-        if (user.role === 'Interviewer') {
+        if (user.role === 'interviewer') {
           badgeText = 'Interviewer';
           badgeClass = 'bg-gradient-to-r from-blue-500 to-purple-500 text-white';
         } else if (user.role === 'user') {
@@ -260,7 +230,7 @@ export default function UserManagement() {
           >
             <option value="All">All Roles</option>
             <option value="Candidate">Candidate</option>
-            <option value="Interviewer">Interviewer</option>
+            <option value="interviewer">Interviewer</option>
           </motion.select>
 
           <motion.select
@@ -278,16 +248,21 @@ export default function UserManagement() {
 
       {/* Users Table */}
       <motion.div variants={itemVariants}>
-        <ReusableTable
-          data={pagedUsers}
-          columns={columns}
-          title="Users"
-          onRowClick={handleRowClick}
-        />
+        {(() => {
+          const tableData = users.map((user, i) => ({ ...user, seq: ((page - 1) * pageSize) + i + 1 }));
+          return (
+            <ReusableTable
+              data={tableData}
+              columns={columns}
+              title="Users"
+              onRowClick={handleRowClick}
+            />
+          );
+        })()}
         <div className="mt-4 flex justify-center">
           <Paginator
             page={page}
-            totalItems={totalItems}
+            totalItems={total}
             onPageChange={setPage}
             pageSize={pageSize}
           />

@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useAdminSessions } from "../../../hooks/useAdminSessions";
+import { useDebounce } from "../../../hooks/useDebounce";
 import { ReusableTable, TableColumn } from "../../../components/ui/ReusableTable";
 import type { AdminBookingList } from "../../../types/booking.types";
 import { BookingStatus } from "../../../types/booking.types";
 import Paginator from "../../../components/ui/paginator";
-import { Search, Calendar ,Eye} from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from "../../../components/ui/dialog";
 
@@ -34,72 +35,22 @@ const StatusBadge: React.FC<{ status: BookingStatus }> = ({ status }) => {
 };
 
 export default function AdminSessionsPage() {
-  const { sessions, loading, error } = useAdminSessions();
-
   // Filters & pagination
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [dateFilter, setDateFilter] = useState<string>("All");
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [page, setPage] = useState(1);
-  const pageSize = 6; 
+  const pageSize = 6;
+  const { sessions, total, loading, error } = useAdminSessions(debouncedSearchTerm, page, pageSize); 
 
   const [selectedSession, setSelectedSession] = useState<AdminBookingList | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Derived filtering
-  const filteredSessions = useMemo(() => {
-    const now = new Date();
-    const isToday = (d: Date) =>
-      d.getDate() === now.getDate() &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear();
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
 
-    const isThisWeek = (d: Date) => {
-      const firstDayOfWeek = new Date(now);
-      firstDayOfWeek.setDate(now.getDate() - now.getDay());
-      firstDayOfWeek.setHours(0, 0, 0, 0);
-      const lastDayOfWeek = new Date(firstDayOfWeek);
-      lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
-      lastDayOfWeek.setHours(23, 59, 59, 999);
-      return d >= firstDayOfWeek && d <= lastDayOfWeek;
-    };
-
-    const isThisMonth = (d: Date) =>
-      d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-
-    return sessions.filter((s) => {
-      // Search by user or interviewer name
-      const matchesSearch = (
-        s.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.interviewerName?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      // Status filter
-      const matchesStatus =
-        statusFilter === "All" || s.status.toLowerCase() === statusFilter.toLowerCase();
-
-      // Date filter
-      let matchesDate = true;
-      if (dateFilter !== "All") {
-        const d = new Date(s.date);
-        if (!isNaN(d.getTime())) {
-          if (dateFilter === "Today") matchesDate = isToday(d);
-          else if (dateFilter === "Week") matchesDate = isThisWeek(d);
-          else if (dateFilter === "Month") matchesDate = isThisMonth(d);
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesDate;
-    });
-  }, [sessions, searchTerm, statusFilter, dateFilter]);
-
-  // Pagination
-  const pagedSessions = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredSessions.slice(start, start + pageSize);
-  }, [filteredSessions, page]);
-
-  // Columns for table (improved rendering)
+  
   type Row = (AdminBookingList & { index: number });
   const columns: TableColumn<Row>[] = [
     {
@@ -165,8 +116,8 @@ export default function AdminSessionsPage() {
 
   const dataWithIndex: Row[] = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return pagedSessions.map((s, i) => ({ ...s, index: start + i }));
-  }, [pagedSessions, page]);
+    return sessions.map((s, i) => ({ ...s, index: start + i }));
+  }, [sessions, page, pageSize]);
 
   // Animations (reuse from wallet style)
   const containerVariants: Variants = {
@@ -193,57 +144,18 @@ export default function AdminSessionsPage() {
         </div>
       </motion.div>
 
-      {/* Filters */}
+      {/* Search */}
       <motion.div className="glass-card rounded-xl p-6" variants={itemVariants}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
-            <motion.input
-              type="text"
-              placeholder="Search by user or interviewer..."
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="w-full pl-12 pr-4 py-3 input-glow rounded-lg text-white placeholder-gray-400 focus:outline-none text-lg"
-              whileFocus={{ scale: 1.02 }}
-            />
-          </div>
-
-          {/* Status */}
-          <motion.select
-            value={statusFilter}
-            onChange={(e) => {
-              setPage(1);
-              setStatusFilter(e.target.value);
-            }}
-            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
+        <div className="relative max-w-8xl">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-5 h-5" />
+          <motion.input
+            type="text"
+            placeholder="Search by user or interviewer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 input-glow rounded-lg text-white placeholder-gray-400 focus:outline-none text-lg"
             whileFocus={{ scale: 1.02 }}
-          >
-            <option value="All">All Status</option>
-            <option value={BookingStatus.PENDING}>Pending</option>
-            <option value={BookingStatus.CONFIRMED}>Confirmed</option>
-            <option value={BookingStatus.COMPLETED}>Completed</option>
-            <option value={BookingStatus.CANCELLED}>Cancelled</option>
-          </motion.select>
-
-          {/* Date */}
-          <motion.select
-            value={dateFilter}
-            onChange={(e) => {
-              setPage(1);
-              setDateFilter(e.target.value);
-            }}
-            className="px-4 py-3 input-glow rounded-lg text-white focus:outline-none text-lg"
-            whileFocus={{ scale: 1.02 }}
-          >
-            <option value="All">All Time</option>
-            <option value="Today">Today</option>
-            <option value="Week">This Week</option>
-            <option value="Month">This Month</option>
-          </motion.select>
+          />
         </div>
       </motion.div>
 
@@ -261,7 +173,7 @@ export default function AdminSessionsPage() {
             <h2 className="text-2xl font-semibold text-white">All Sessions</h2>
             <div className="flex items-center space-x-4">
               <span className="text-gray-500">
-                • Page {page} of {Math.max(1, Math.ceil(filteredSessions.length / pageSize))}
+                • Page {page} of {Math.max(1, Math.ceil(total / pageSize))} • Total: {total} sessions
               </span>
             </div>
           </div>
@@ -272,14 +184,14 @@ export default function AdminSessionsPage() {
           columns={columns}
           loading={loading}
           variant="admin"
-          emptyMessage={searchTerm || statusFilter !== "All" || dateFilter !== "All" ? "No sessions match your filters" : "No sessions found"}
+          emptyMessage={searchTerm ? "No sessions match your search" : "No sessions found"}
         />
       </motion.div>
 
       {/* Pagination */}
       <Paginator
         page={page}
-        totalItems={filteredSessions.length}
+        totalItems={total}
         onPageChange={setPage}
         pageSize={pageSize}
         className="justify-center"

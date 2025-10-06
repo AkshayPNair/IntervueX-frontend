@@ -9,23 +9,23 @@ import { Search, Video, Users, Clock, Calendar,X,AlertTriangle , User, Briefcase
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { useInterviewerBookings } from "@/hooks/useInterviewerBookings";
 import { useUserRatingByBookingId } from "@/hooks/useUserRatingByBookingId";
+import { useDebounce } from "@/hooks/useDebounce";
 import { BookingStatus, InterviewerBooking } from "@/types/booking.types";
 import Paginator from "../../../components/ui/paginator";
 
 const Sessions = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [activeTab, setActiveTab] = useState("upcoming");
-  const { bookings, loading, error } = useInterviewerBookings()
+  const { bookings, loading, error } = useInterviewerBookings(debouncedSearchTerm)
 
   const filteredSessions = useMemo(() => bookings.filter(session => {
-    const matchesSearch = session.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesTab = activeTab === "upcoming" ? session.status === BookingStatus.CONFIRMED :
       activeTab === "completed" ? session.status === BookingStatus.COMPLETED :
         activeTab === "cancelled" ? session.status === BookingStatus.CANCELLED :
           true;
-    return matchesSearch && matchesTab;
- }), [bookings, searchTerm, activeTab]);
+   return matchesTab;
+ }), [bookings, activeTab]);
 
   const upcomingSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.CONFIRMED), [filteredSessions]);
   const completedSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.COMPLETED), [filteredSessions]);

@@ -67,8 +67,9 @@ export interface InterviewerProfile {
   hourlyRate?: number;
 }
 
-export const getAllInterviewers = async (): Promise<InterviewerProfile[]> => {
-  const response = await api.get(API_ROUTES.USER.INTERVIEWERS);
+export const getAllInterviewers = async (searchQuery?: string): Promise<InterviewerProfile[]> => {
+  const params = searchQuery ? { search: searchQuery } : {};
+  const response = await api.get(API_ROUTES.USER.INTERVIEWERS, { params });
    return response.data;
 };
 

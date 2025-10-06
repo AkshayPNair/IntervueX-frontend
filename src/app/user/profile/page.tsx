@@ -148,6 +148,7 @@ export default function ProfilePage() {
     const errors: string[] = [];
     const trimmed = name.trim();
     if (!trimmed) errors.push("Name is required");
+    if (trimmed.length > 30) errors.push("Name must be 30 characters or less");
     if (/^\d+$/.test(trimmed)) errors.push("Name cannot be only numbers");
     if (/[^a-zA-Z\s]/.test(trimmed)) errors.push("Name cannot contain special characters or numbers");
     return errors;

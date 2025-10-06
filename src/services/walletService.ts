@@ -17,8 +17,9 @@ export const getAdminWalletSummary = async (): Promise<WalletSummary> => {
   return response.data;
 };
 
-export const getAdminWalletTransactions = async (): Promise<WalletTransaction[]> => {
-  const response = await api.get(API_ROUTES.ADMIN.WALLET_TRANSACTIONS);
+export const getAdminWalletTransactions = async (searchQuery?: string): Promise<WalletTransaction[]> => {
+  const params = searchQuery ? { search: searchQuery } : {};
+  const response = await api.get(API_ROUTES.ADMIN.WALLET_TRANSACTIONS, { params });
   return response.data;
 }
 

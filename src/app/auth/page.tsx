@@ -113,7 +113,9 @@ export default function Auth() {
 
         if (!formData.name.trim()) {
           newErrors.name = "Name is required"
-        }else if(!/^[a-zA-Z][a-zA-Z\s]*$/.test(formData.name)){
+       } else if (formData.name.trim().length > 30) {
+          newErrors.name = "Name must be 30 characters or less"
+        } else if(!/^[a-zA-Z][a-zA-Z\s]*$/.test(formData.name)){
           newErrors.name = "Name must only contain letters"
         }
         if (!formData.email.trim()) {

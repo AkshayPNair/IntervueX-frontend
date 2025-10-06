@@ -33,8 +33,9 @@ export const verifyPayment = async (verifyData: VerifyPaymentData): Promise<{ me
 };
 
 
-export const getInterviewerBookings=async():Promise<InterviewerBooking[]>=>{
-    const response=await api.get(API_ROUTES.INTERVIEWER.BOOKINGS)
+export const getInterviewerBookings=async(search?:string):Promise<InterviewerBooking[]>=>{
+    const params = search ? { search } : {};
+    const response=await api.get(API_ROUTES.INTERVIEWER.BOOKINGS, { params })
     return response.data
 }
 
