@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { listInterviewerFeedbacks } from "@/services/interviewerService";
-import { FeedbackResponseData } from "@/types/feedback.types";
+import { FeedbackResponseData,PaginatedFeedbackResponse } from "@/types/feedback.types";
 
 interface UseInterviewerFeedbacksReturn{
-    feedbacks:FeedbackResponseData[];
+    feedbacks: FeedbackResponseData[] | null;
+    pagination: PaginatedFeedbackResponse['pagination'] | null;
     loading:boolean;
     error:string | null;
-    refetch:()=>Promise<void>;
 }
 
-export const useInterviewerFeedbacks=():UseInterviewerFeedbacksReturn=>{
-    const [feedbacks, setFeedbacks]=useState<FeedbackResponseData[]>([])
+export const useInterviewerFeedbacks = (page: number, limit: number, searchTerm: string, sortBy: string): UseInterviewerFeedbacksReturn => {
+    const [data, setData] = useState<PaginatedFeedbackResponse | null>(null);
     const [loading,setLoading]=useState<boolean>(true)
     const [error,setError]=useState<string|null>(null)
 
@@ -18,18 +18,23 @@ export const useInterviewerFeedbacks=():UseInterviewerFeedbacksReturn=>{
         setLoading(true)
         setError(null)
         try {
-            const data = await listInterviewerFeedbacks();
-      setFeedbacks(data);
+            const response = await listInterviewerFeedbacks(page, limit, searchTerm, sortBy);
+            setData(response);
         } catch (error:any) {
             console.error("Error fetching feedbacks:", error);
-      setError(error?.response?.data?.error || "Failed to fetch feedbacks");
+            setError(error?.response?.data?.error || "Failed to fetch feedbacks");
         }finally{
             setLoading(false)
         }
     }
     useEffect(()=>{
         fetchFeedbacks()
-    },[])
+    },[page, limit, searchTerm, sortBy])
 
-    return { feedbacks,loading,error, refetch:fetchFeedbacks}
+    return { 
+       feedbacks: data?.data ?? [], 
+       pagination: data?.pagination ?? null, 
+       loading, 
+       error 
+   }
 }
