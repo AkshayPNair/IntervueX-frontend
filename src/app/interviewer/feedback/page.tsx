@@ -11,42 +11,21 @@ import { Calendar, Search, Star, Eye, Filter, ArrowBigRight, ArrowRight } from "
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { useInterviewerBookings } from '@/hooks/useInterviewerBookings'
 import { useInterviewerFeedbacks } from '@/hooks/useInterviewerFeedbacks'
-import { FeedbackResponseData } from "@/types/feedback.types";
 import Paginator from "../../../components/ui/paginator";
+import { useDebounce } from '@/hooks/useDebounce';
 
 const SessionHistory = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("date");
-  const { feedbacks, loading } = useInterviewerFeedbacks();
-  const { bookings } = useInterviewerBookings();
-
   const [page, setPage] = useState(1);
   const pageSize = 6;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("date");
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const { feedbacks, pagination, loading } = useInterviewerFeedbacks(page, pageSize, debouncedSearchTerm, sortBy);
+  const { bookings } = useInterviewerBookings();
 
-  const filtered = useMemo(() => {
-    const s = searchTerm.trim().toLowerCase();
-    let arr = feedbacks
-    if (s) {
-      arr = arr.filter(f => f.overallFeedback?.toLowerCase().includes(s) || f.strengths?.toLowerCase().includes(s));
-    }
-    if (sortBy === 'date') {
-      arr = [...arr].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else if (sortBy === 'rating') {
-      arr = [...arr].sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
-    }
-    return arr;
-  }, [feedbacks, searchTerm, sortBy]);
-
-  // Reset page when filters change
   useEffect(() => {
     setPage(1)
-  }, [searchTerm, sortBy, feedbacks])
-
-  const totalItems = filtered.length;
-  const pagedFeedbacks = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page]);
+  }, [debouncedSearchTerm, sortBy])
 
   const getStars = (rating: number) => (
     [...Array(5)].map((_, i) => (
@@ -100,10 +79,10 @@ const SessionHistory = () => {
             <div className="flex items-center space-x-2 mb-4">
               <h2 className="text-xl font-bold text-gradient">Your Feedbacks</h2>
             </div>
-            <p className="text-purple-300 mb-6">{loading ? 'Loading...' : `${filtered.length} feedbacks found`}</p>
+            <p className="text-purple-300 mb-6">{loading ? 'Loading...' : `${pagination?.totalItems || 0} feedbacks found`}</p>
 
             <div className="space-y-4">
-            {pagedFeedbacks.map((f, index) => (
+            {feedbacks && feedbacks.map((f, index) => (
                 <div key={f.id} className="flex items-center justify-between p-4 glass-card rounded-xl hover-glow transition-all duration-200 border border-purple-400/20" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="flex items-center gap-6">
                   {(() => {
@@ -161,13 +140,13 @@ const SessionHistory = () => {
             <div className="mt-6 flex justify-center">
               <Paginator 
                 page={page} 
-                totalItems={totalItems} 
+                totalItems={pagination?.totalItems || 0}
                 onPageChange={setPage} 
                 pageSize={pageSize} 
               />
             </div>
 
-            {!loading && filtered.length === 0 && (
+            {!loading && (!feedbacks || feedbacks.length === 0) && (
               <div className="text-center py-12">
                 <Calendar className="w-12 h-12 text-purple-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2 text-white">No feedbacks found</h3>

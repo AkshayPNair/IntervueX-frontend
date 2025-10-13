@@ -1,6 +1,6 @@
 import api from './api';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { FeedbackResponseData, SubmitFeedbackData} from '@/types/feedback.types';
+import { FeedbackResponseData, SubmitFeedbackData, PaginatedFeedbackResponse} from '@/types/feedback.types';
 import { InterviewerDashboardResponse } from '@/types/dashboard.types';
 import { ChangePasswordData } from '@/types/auth.types';
 
@@ -137,10 +137,11 @@ export const submitFeedback=async(data:SubmitFeedbackData):Promise<SubmitFeedbac
     return response.data;
 }
 
-export const listInterviewerFeedbacks = async():Promise<FeedbackResponseData[]>=>{
-    const response=await api.get(API_ROUTES.INTERVIEWER.FEEDBACK)
-    return response.data
-}
+export const listInterviewerFeedbacks = async (page: number, limit: number,searchTerm: string,sortBy: string): Promise<PaginatedFeedbackResponse> => {
+    const params = new URLSearchParams({page: String(page),limit: String(limit),search: searchTerm,sort: sortBy,});
+    const response = await api.get(`${API_ROUTES.INTERVIEWER.FEEDBACK}?${params.toString()}`);
+   return response.data;
+ }
 
 export const getFeedbackById=async(id:string):Promise<FeedbackResponseData>=>{
     const response = await api.get(API_ROUTES.INTERVIEWER.FEEDBACK_BY_ID(id));

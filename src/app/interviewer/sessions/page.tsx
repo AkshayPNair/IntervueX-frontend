@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,47 +16,14 @@ import Paginator from "../../../components/ui/paginator";
 const Sessions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [activeTab, setActiveTab] = useState("upcoming");
-  const { bookings, loading, error } = useInterviewerBookings(debouncedSearchTerm)
-
-  const filteredSessions = useMemo(() => bookings.filter(session => {
-    const matchesTab = activeTab === "upcoming" ? session.status === BookingStatus.CONFIRMED :
-      activeTab === "completed" ? session.status === BookingStatus.COMPLETED :
-        activeTab === "cancelled" ? session.status === BookingStatus.CANCELLED :
-          true;
-   return matchesTab;
- }), [bookings, activeTab]);
-
-  const upcomingSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.CONFIRMED), [filteredSessions]);
-  const completedSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.COMPLETED), [filteredSessions]);
-  const cancelledSessions = useMemo(() => filteredSessions.filter(booking => booking.status === BookingStatus.CANCELLED), [filteredSessions]);
-
+  const [activeTab, setActiveTab] = useState<BookingStatus>(BookingStatus.CONFIRMED);
+  const [page, setPage] = useState(1);
   const pageSize = 6;
-  const [pageUpcoming, setPageUpcoming] = useState(1);
-  const [pageCompleted, setPageCompleted] = useState(1);
-  const [pageCancelled, setPageCancelled] = useState(1);
+  const { bookings, pagination,loading, error } = useInterviewerBookings(page,pageSize,activeTab,debouncedSearchTerm)
 
-  const pagedUpcoming = useMemo(() => {
-    const start = (pageUpcoming - 1) * pageSize;
-    return upcomingSessions.slice(start, start + pageSize);
-  }, [upcomingSessions, pageUpcoming]);
-
-  const pagedCompleted = useMemo(() => {
-    const start = (pageCompleted - 1) * pageSize;
-    return completedSessions.slice(start, start + pageSize);
-  }, [completedSessions, pageCompleted]);
-
-  const pagedCancelled = useMemo(() => {
-    const start = (pageCancelled - 1) * pageSize;
-    return cancelledSessions.slice(start, start + pageSize);
-  }, [cancelledSessions, pageCancelled]);
-
-   const displayedSessions = useMemo(() => {
-    if (activeTab === "upcoming") return pagedUpcoming;
-    if (activeTab === "completed") return pagedCompleted;
-    if (activeTab === "cancelled") return pagedCancelled;
-    return filteredSessions;
-  }, [activeTab, pagedUpcoming, pagedCompleted, pagedCancelled, filteredSessions]);
+  useEffect(()=>{
+    setPage(1)
+  },[activeTab,debouncedSearchTerm])
 
   const InterviewerBookingRating = ({ bookingId }: { bookingId: string }) => {
     const { data, loading } = useUserRatingByBookingId(bookingId)
@@ -145,14 +112,6 @@ const Sessions = () => {
       </div>
   )
   } 
-
-  const currentPage = activeTab === "upcoming" ? pageUpcoming :
-    activeTab === "completed" ? pageCompleted :
-    activeTab === "cancelled" ? pageCancelled : 1;
-
-  const totalItems = activeTab === "upcoming" ? upcomingSessions.length :
-    activeTab === "completed" ? completedSessions.length :
-    activeTab === "cancelled" ? cancelledSessions.length : filteredSessions.length;
 
   const [selectedCandidate, setSelectedCandidate] = useState<InterviewerBooking | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -299,8 +258,8 @@ const Sessions = () => {
         {/* Tab Buttons */}
         <div className="flex justify-center mb-8 space-x-4">
           <Button
-             onClick={() => { setActiveTab("upcoming"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "upcoming"
+             onClick={() =>  setActiveTab(BookingStatus.CONFIRMED)}
+            className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === BookingStatus.CONFIRMED
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
               }`}
@@ -308,7 +267,7 @@ const Sessions = () => {
             Upcoming 
           </Button>
           <Button
-            onClick={() => { setActiveTab("completed"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
+            onClick={() => setActiveTab(BookingStatus.COMPLETED)}
             className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "completed"
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
@@ -317,7 +276,7 @@ const Sessions = () => {
             Completed 
           </Button>
           <Button
-            onClick={() => { setActiveTab("cancelled"); setPageUpcoming(1); setPageCompleted(1); setPageCancelled(1); }}
+            onClick={() => setActiveTab(BookingStatus.CANCELLED)}
             className={`px-8 py-3 rounded-xl font-semibold transition-all ${activeTab === "cancelled"
                 ? "glow-button text-white"
                 : "glass-effect border-purple-400/30 text-purple-300 hover:bg-purple-500/20"
@@ -355,7 +314,7 @@ const Sessions = () => {
         {/* Sessions Grid */}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {displayedSessions.map((session, index) => (
+              {bookings.map((session, index) => (
               <div
                 key={session.id}
                 className="card-futuristic hover-glow p-6 animate-fade-in rounded-2xl"
@@ -464,7 +423,7 @@ const Sessions = () => {
           </div>
         )}
 
-        {!loading && !error && filteredSessions.length === 0 && (
+{!loading && !error && bookings.length === 0 && (
           <div className="card-futuristic p-12 text-center animate-fade-in rounded-2xl">
             <Video className="w-16 h-16 text-purple-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No sessions found</h3>
@@ -473,17 +432,13 @@ const Sessions = () => {
         )}
 
          {/* Pagination */}
-        {!loading && !error && totalItems > 0 && (
+         {!loading && !error && pagination && pagination.totalItems > 0 && (
           <div className="mt-8 flex justify-center">
             <Paginator
-              page={currentPage}
-              totalItems={totalItems}
+             page={page}
+             totalItems={pagination.totalItems} 
               pageSize={pageSize}
-              onPageChange={(p) => {
-                if (activeTab === "upcoming") setPageUpcoming(p);
-                else if (activeTab === "completed") setPageCompleted(p);
-                else if (activeTab === "cancelled") setPageCancelled(p);
-              }}
+              onPageChange={setPage} 
             />
           </div>
         )}

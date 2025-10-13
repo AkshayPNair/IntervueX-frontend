@@ -1,8 +1,8 @@
-export enum BookingStatus{
-    PENDING='pending',
-    CONFIRMED='confirmed',
-    COMPLETED='completed',
-    CANCELLED='cancelled'
+export enum BookingStatus {
+    PENDING = 'pending',
+    CONFIRMED = 'confirmed',
+    COMPLETED = 'completed',
+    CANCELLED = 'cancelled'
 }
 
 export enum PaymentMethod {
@@ -10,14 +10,14 @@ export enum PaymentMethod {
     RAZORPAY = 'razorpay'
 }
 
-export interface CreateBookingData{
-    interviewerId:string;
-    date:string;
-    startTime:string;
-    endTime:string;
-    amount:number;
-    paymentMethod:PaymentMethod;
-    paymentId?:string;
+export interface CreateBookingData {
+    interviewerId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paymentId?: string;
 }
 
 export interface Booking {
@@ -45,11 +45,11 @@ export interface Booking {
 export interface RazorpayOrder {
     id: string;
     amount: number;
-   currency: string;
+    currency: string;
     receipt: string;
 }
 
-export interface InterviewerBooking{
+export interface InterviewerBooking {
     id: string;
     userId: string;
     interviewerId: string;
@@ -70,24 +70,24 @@ export interface InterviewerBooking{
     cancelReason?: string;
 }
 
-export interface CancelBookingData{
-    bookingId:string;
-    reason:string;
+export interface CancelBookingData {
+    bookingId: string;
+    reason: string;
 }
 
-export interface CompleteBookingData{
-    bookingId:string
+export interface CompleteBookingData {
+    bookingId: string
 }
 
 export interface AdminBookingList {
-  id: string;
-  userName: string;
-  interviewerName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: BookingStatus;
-  paymentMethod:PaymentMethod;
+    id: string;
+    userName: string;
+    interviewerName: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: BookingStatus;
+    paymentMethod: PaymentMethod;
 }
 
 export interface VerifyPaymentData {
@@ -95,4 +95,14 @@ export interface VerifyPaymentData {
     razorpay_payment_id: string;
     razorpay_signature: string;
     bookingId: string;
+}
+
+export interface PaginatedInterviewerBookings {
+    data: InterviewerBooking[];
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        limit: number;
+    };
 }
