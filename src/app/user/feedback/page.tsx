@@ -14,22 +14,17 @@ import Paginator from "../../../components/ui/paginator";
 
 export default function FeedbackPage() {
   const router = useRouter()
-  const { feedbacks, loading, error } = useUserFeedbacks()
-  const { bookings, loading: bookingsLoading } = useUserBookings()
-
   const [page, setPage] = useState(1)
   const pageSize = 6
+  const { feedbacks, pagination, loading, error, refetch } = useUserFeedbacks(page, pageSize)
+  const { bookings, loading: bookingsLoading } = useUserBookings()
 
-  // Reset to first page when list changes
   useEffect(() => {
-    setPage(1)
-  }, [feedbacks])
+    refetch(page)
+  }, [page, refetch])
 
-  const totalItems = feedbacks.length
-  const pagedFeedbacks = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return feedbacks.slice(start, start + pageSize)
-  }, [feedbacks, page])
+  const totalItems = pagination?.totalItems ?? 0
+  const pagedFeedbacks = useMemo(() => feedbacks, [feedbacks])
 
  return (
     <div className="min-h-screen bg-gradient-to-br from-[#0D1117] via-[#0D1117] to-[#3B0A58] text-white relative overflow-x-hidden">

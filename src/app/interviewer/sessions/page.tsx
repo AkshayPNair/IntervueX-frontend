@@ -5,15 +5,18 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Video, Users, Clock, Calendar,X,AlertTriangle , User, Briefcase, MapPin, Star, Play, Mail, Phone, Eye, MessageSquare } from "lucide-react";
+import { Search, Video, Users, Clock, Calendar,X,AlertTriangle , User, Briefcase,MessageCircle, MapPin, Star, Play, Mail, Phone, Eye, MessageSquare } from "lucide-react";
 import ParticleBackground from "../../../components/ui/ParticleBackground";
 import { useInterviewerBookings } from "@/hooks/useInterviewerBookings";
 import { useUserRatingByBookingId } from "@/hooks/useUserRatingByBookingId";
 import { useDebounce } from "@/hooks/useDebounce";
+import { startOrGetConversation } from '@/services/chatService'
 import { BookingStatus, InterviewerBooking } from "@/types/booking.types";
 import Paginator from "../../../components/ui/paginator";
+import { useRouter} from "next/navigation"
 
 const Sessions = () => {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [activeTab, setActiveTab] = useState<BookingStatus>(BookingStatus.CONFIRMED);
@@ -116,6 +119,16 @@ const Sessions = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<InterviewerBooking | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<InterviewerBooking | null>(null);
+  const [chattingWithUserId, setChattingWithUserId] = useState<string | null>(null);
+  const handleChatClick = async (userId: string) => {
+    try {
+      const conversation = await startOrGetConversation({userId});
+      router.push(`/interviewer/chat?conv=${conversation.id}`);
+    } catch (error) {
+      console.error('Failed to start chat:', error);
+    }
+  };
+  
 
   const CandidateProfile = ({ candidate, onClose }: { candidate: InterviewerBooking; onClose: () => void }) => (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -161,6 +174,17 @@ const Sessions = () => {
               <div className="flex items-center space-x-3">
                 <span className="text-purple-200 text-sm">₹{candidate.amount}</span>
               </div>
+              {candidate.discussionTopic && (
+                <div className="md:col-span-2">
+                   <div className="flex items-center space-x-2 mb-1">
+                    <MessageCircle className="w-4 h-4 text-blue-400" />
+                    <h4 className="text-sm font-semibold text-purple-200">Discussion Topic</h4>
+                  </div>
+                  <p className="text-purple-100 text-sm whitespace-pre-wrap bg-white/5 border border-white/10 rounded-lg p-3">
+                    {candidate.discussionTopic}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -384,12 +408,22 @@ const Sessions = () => {
                 {/* Action Buttons */}
                 <div className="flex space-x-2">
                   {session.status === BookingStatus.CONFIRMED ? (
+                    <>
                     <Button size="sm" asChild className="flex-1 glow-button border-0 text-xs">
                       <Link href={`/interviewer/sessions/${session.id}`}>
                         <Video className="w-4 h-4 mr-1" />
                         Start
                       </Link>
                     </Button>
+                     <Button
+                     size="sm"
+                     onClick={() => handleChatClick(session.userId)}
+                     className="flex-1 glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 text-xs"
+                   >
+                     <MessageCircle className="w-4 h-4 mr-1" />
+                     Chat
+                   </Button>
+                   </>
                   ) : session.status === BookingStatus.COMPLETED ? (
                      <>
                       <Button size="sm" asChild className="flex-1 glass-effect border-purple-400/30 text-white hover:bg-purple-500/20 text-xs">

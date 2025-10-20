@@ -13,15 +13,17 @@ import { useInterviewerBookings } from '@/hooks/useInterviewerBookings'
 import { useInterviewerFeedbacks } from '@/hooks/useInterviewerFeedbacks'
 import Paginator from "../../../components/ui/paginator";
 import { useDebounce } from '@/hooks/useDebounce';
+import { BookingStatus } from "@/types/booking.types";
 
 const SessionHistory = () => {
   const [page, setPage] = useState(1);
   const pageSize = 6;
+  const status: BookingStatus = BookingStatus.COMPLETED;
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const { feedbacks, pagination, loading } = useInterviewerFeedbacks(page, pageSize, debouncedSearchTerm, sortBy);
-  const { bookings } = useInterviewerBookings();
+  const { bookings } = useInterviewerBookings(1, 1000, status, debouncedSearchTerm);
 
   useEffect(() => {
     setPage(1)

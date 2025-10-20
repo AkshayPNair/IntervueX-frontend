@@ -44,6 +44,8 @@ export default function BookSessionPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null)
   const [pendingBooking, setPendingBooking] = useState<Booking | null>(null);
+  const [discussionTopic, setDiscussionTopic] = useState("");
+  const [showDiscussionModal, setShowDiscussionModal] = useState(false);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -572,7 +574,7 @@ export default function BookSessionPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => setShowBookingModal(true)}
+                    onClick={() => setShowDiscussionModal(true)}
                     className="bg-gradient-to-r from-[#3FB950] to-[#2EA043] hover:from-[#3FB950]/90 hover:to-[#2EA043]/90 text-white px-12 py-4 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     Confirm Booking on {new Date(selectedDate).toLocaleDateString('en-US', {
@@ -722,6 +724,91 @@ export default function BookSessionPage() {
         )}
       </AnimatePresence>
 
+            {/* Discussion Topic Modal */}
+            <AnimatePresence>
+        {showDiscussionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDiscussionModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-gradient-to-br from-[#161B22]/95 to-[#0D1117]/95 backdrop-blur-xl border-2 border-[#BC8CFF]/30 rounded-3xl p-8 max-w-lg w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-[#E6EDF3] text-2xl font-bold mb-2">What would you like to discuss?</h3>
+                  <p className="text-[#7D8590] text-sm">
+                    Share a short summary (max 100 characters) so the interviewer can prepare.
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDiscussionModal(false)}
+                  className="text-[#7D8590] hover:text-[#FF7B72] hover:bg-[#FF7B72]/10 rounded-full w-10 h-10 p-0"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="bg-[#0D1117]/50 rounded-2xl p-6 mb-6">
+                <label className="block text-[#E6EDF3] text-sm font-semibold mb-2">
+                  Discussion topic
+                </label>
+                <textarea
+                  value={discussionTopic}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value.length <= 100) {
+                      setDiscussionTopic(value);
+                    }
+                  }}
+                  className="w-full h-28 bg-[#0D1117] border border-[#30363D] rounded-xl px-4 py-3 text-[#E6EDF3] placeholder:text-[#7D8590] focus:outline-none focus:border-[#BC8CFF]"
+                  placeholder="e.g., Resume review, system design practice, interview prep..."
+                />
+                <div className="mt-2 text-xs text-[#7D8590]">
+                  {discussionTopic.length}/100 characters
+                </div>
+                {discussionTopic.trim().length === 0 && (
+                  <div className="mt-2 text-xs text-[#FF7B72]">
+                    Discussion topic is required.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="outline"
+                  className="flex-1 bg-transparent border-[#30363D] text-[#E6EDF3] hover:bg-[#30363D]/20 hover:border-[#7D8590] py-3 rounded-xl"
+                  onClick={() => setShowDiscussionModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-[#BC8CFF] to-[#3B0A58] hover:from-[#BC8CFF]/90 hover:to-[#3B0A58]/90 text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={discussionTopic.trim().length === 0}
+                  onClick={() => {
+                    setShowDiscussionModal(false);
+                    setShowBookingModal(true);
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
       {/* Booking Details Modal */}
       <AnimatePresence>
         {showBookingModal && selectedInterviewer && selectedSlot && selectedDate && (
@@ -833,6 +920,8 @@ export default function BookSessionPage() {
                   </div>
                 </div>
               </div>
+
+              
 
               {/* Action Buttons */}
               <div className="flex items-center space-x-4">
@@ -996,7 +1085,8 @@ export default function BookSessionPage() {
                           const booking = await bookSession(
                             selectedDate,
                             selectedSlot,
-                            PaymentMethod.WALLET
+                            PaymentMethod.WALLET,
+                            discussionTopic.trim()
                           );
                           toast.success('Booking confirmed successfully!');
                           const qs = new URLSearchParams({
@@ -1024,7 +1114,8 @@ export default function BookSessionPage() {
                           const booking = await bookSession(
                             selectedDate,
                             selectedSlot,
-                            PaymentMethod.RAZORPAY
+                            PaymentMethod.RAZORPAY,
+                            discussionTopic.trim()
                           );
                           setPendingBooking(booking);
 

@@ -17,6 +17,7 @@ export interface CreateBookingData {
     endTime: string;
     amount: number;
     paymentMethod: PaymentMethod;
+    discussionTopic: string;
     paymentId?: string;
 }
 
@@ -36,6 +37,7 @@ export interface Booking {
     interviewerAmount: number;
     status: BookingStatus;
     paymentMethod: PaymentMethod;
+    discussionTopic?: string;
     paymentId?: string;
     createdAt: string;
     updatedAt: string;
@@ -61,9 +63,10 @@ export interface InterviewerBooking {
     interviewerAmount: number;
     status: BookingStatus;
     paymentMethod: PaymentMethod;
+    discussionTopic?: string;
     paymentId?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
     userName: string;
     userEmail: string;
     userProfilePicture: string;

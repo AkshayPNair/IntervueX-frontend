@@ -345,7 +345,7 @@ export default function InterviewerProfilePage() {
                       variant="outline"
                       onClick={async () => {
                         try {
-                          const conv = await startOrGetConversation(selectedInterviewer.id)
+                          const conv = await startOrGetConversation({ interviewerId: selectedInterviewer.id })
                           // Navigate to user chat and select this conversation via query string
                           router.push(`/user/chat?conv=${conv.id}`)
                         } catch (err) {

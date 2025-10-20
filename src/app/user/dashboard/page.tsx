@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [dashboardTab, setDashboardTab] = useState("overview")
   const { stats, upcomingSessions, loading } = useUserDashboard()
-  const { feedbacks } = useUserFeedbacks()
+  const { feedbacks } = useUserFeedbacks(1, 6)
   const latestFeedback = useMemo(() => {
     if (!feedbacks || feedbacks.length === 0) return null
     return [...feedbacks].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
