@@ -32,7 +32,6 @@ export const verifyPayment = async (verifyData: VerifyPaymentData): Promise<{ me
     return response.data;
 };
 
-
 export const getInterviewerBookings=async(page:number,limit:number,status:BookingStatus,search:string):Promise<PaginatedInterviewerBookings>=>{
     const params = new URLSearchParams({page: String(page),limit: String(limit),status: status,search: search,});
     const response = await api.get(`${API_ROUTES.INTERVIEWER.BOOKINGS}?${params.toString()}`);

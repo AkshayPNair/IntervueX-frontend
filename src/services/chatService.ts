@@ -2,8 +2,13 @@ import api from './api'
 import { API_ROUTES } from '../constants/apiRoutes';
 import { Conversation,Message } from '@/types/chat.types'
 
-export const startOrGetConversation=async (interviewerId:string):Promise<Conversation>=>{
-    const response=await api.post(API_ROUTES.CHAT.CREATE_CONVERSATION,{interviewerId})
+type StartConversationPayload = {
+    interviewerId?: string
+    userId?: string
+}
+
+export const startOrGetConversation=async (payload: StartConversationPayload):Promise<Conversation>=>{
+    const response=await api.post(API_ROUTES.CHAT.CREATE_CONVERSATION,payload)
     return response.data
 }
 

@@ -24,6 +24,7 @@ import {
   Clock,
   User,
   MessageSquare,
+  MessageCircle,
   Plus,
   X,
   AlertTriangle,
@@ -841,6 +842,17 @@ export default function SessionsPage() {
                         <p className="text-sm text-[#7D8590]">Booking ID</p>
                         <p className="text-[#E6EDF3] font-medium break-all">{selectedCancelledBooking.id}</p>
                       </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                    {selectedCancelledBooking.discussionTopic && (
+                      <div className="flex items-start space-x-3 md:col-span-2">
+                        <MessageCircle className="w-5 h-5 text-[#58A6FF] mt-1" />
+                        <div>
+                          <p className="text-sm text-[#7D8590]">Discussion Topic</p>
+                          <p className="text-[#E6EDF3] font-medium whitespace-pre-wrap">{selectedCancelledBooking.discussionTopic}</p>
+                        </div>
+                      </div>
+                    )}
                     </div>
                   </div>
                 </div>

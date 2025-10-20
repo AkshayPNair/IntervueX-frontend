@@ -9,7 +9,7 @@ interface UseBookingProps {
 }
 
 interface UseBookingReturn {
-  bookSession: (date: string, slot: TimeSlot, paymentMethod: PaymentMethod, paymentId?: string) => Promise<Booking>;
+  bookSession: (date: string, slot: TimeSlot, paymentMethod: PaymentMethod,discussionTopic: string, paymentId?: string) => Promise<Booking>;
   loading: boolean;
   error: string | null;
 }
@@ -22,6 +22,7 @@ export const useBooking = ({ interviewerId, hourlyRate }: UseBookingProps): UseB
     date: string,
     slot: TimeSlot,
     paymentMethod: PaymentMethod,
+    discussionTopic: string,
     paymentId?: string
   ): Promise<Booking> => {
     setLoading(true);
@@ -35,6 +36,7 @@ export const useBooking = ({ interviewerId, hourlyRate }: UseBookingProps): UseB
         endTime: slot.endTime,
         amount: hourlyRate,
         paymentMethod,
+        discussionTopic,
         paymentId
       };
 
