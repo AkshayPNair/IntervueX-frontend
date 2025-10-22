@@ -19,7 +19,7 @@ const Dashboard = () => {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatusData|null>(null)
   const [loading, setLoading] = useState(true)
   const { stats: dashStats, upcomingSessions, loading: dashLoading } = useInterviewerDashboard()
-  const { bookings, loading: bookingsLoading } = useInterviewerBookings()
+  const { bookings, loading: bookingsLoading } = useInterviewerBookings(1, 20, BookingStatus.COMPLETED, "")
 
   const recentSessions = (bookings || [])
     .filter(b => b.status === BookingStatus.COMPLETED)
